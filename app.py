@@ -60,8 +60,8 @@ footer { display: none !important; }
     padding: 16px 18px; margin-bottom: 12px;
 }
 .s-card-title {
-    font-size: 12px; font-weight: 700; color: #3A1D96;
-    text-transform: uppercase; letter-spacing: .05em; margin-bottom: 12px;
+    font-size: 13px; font-weight: 800; color: #3A1D96;
+    letter-spacing: .02em; margin-bottom: 10px;
 }
 .s-divider { border: none; border-top: 1px solid #EEEEEE; margin: 12px 0; }
 
@@ -199,8 +199,8 @@ def _fmt_selector(cid: str, current: str) -> str:
         # 그룹 레이블 + 버튼을 한 줄에
         g_col, *btn_cols = st.columns([0.7] + [1.8] * len(fmts))
         g_col.markdown(
-            f"<div style='font-size:10px;font-weight:700;color:#AAA;"
-            f"text-transform:uppercase;padding-top:7px'>{group}</div>",
+            f"<div style='font-size:12px;font-weight:700;color:#888;"
+            f"padding-top:6px'>{group}</div>",
             unsafe_allow_html=True,
         )
         for col, fmt, lbl in zip(btn_cols, fmts, short_labels):
@@ -217,7 +217,7 @@ def _card(idx: int, c: dict):
     title = c["name"] or f"소재 {idx+1}"
     tag   = c["format"]
 
-    with st.expander(f"**{idx+1}.** {title}　`{tag}`", expanded=True):
+    with st.expander(f"소재 {idx+1}" + (f" — {c['name']}" if c["name"] else ""), expanded=True):
 
         # 소재명 + 포맷 선택
         c["name"] = st.text_input("소재명", value=c["name"],
@@ -234,12 +234,12 @@ def _card(idx: int, c: dict):
         # ── 카피 ──
         st.markdown("<div class='s-card-title'>카피</div>", unsafe_allow_html=True)
         c["main_copy"] = st.text_input(
-            "메인카피 · Bold · #4C4C4C", value=c["main_copy"],
-            placeholder="예: [헬로키티 크록스] 쫀득 말랑 착화감",
+            "메인카피(좌) · Bold · #4C4C4C", value=c["main_copy"],
+            placeholder="예: [헬로키티 크록스] 쫀득 말랑",
             key=f"main_{cid}")
         c["sub_copy"] = st.text_input(
-            "서브카피 · Regular · #777777", value=c["sub_copy"],
-            placeholder="예: 무료배송 + SALE",
+            "메인카피(우) · Bold · #4C4C4C", value=c["sub_copy"],
+            placeholder="예: 착화감 최고",
             key=f"sub_{cid}")
 
         # 강조 / 뱃지
@@ -309,7 +309,7 @@ def _card(idx: int, c: dict):
         st.write("")
 
         # 삭제 / 복제
-        bc1, bc2, _ = st.columns([1, 1, 4])
+        _, bc1, bc2, __ = st.columns([4, 1, 1, 4])
         if bc1.button("🗑 삭제", key=f"del_{cid}"):
             st.session_state.creatives = [x for x in st.session_state.creatives if x["id"] != cid]
             st.rerun()
