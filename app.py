@@ -113,9 +113,10 @@ div[data-testid="column"] button[kind="primary"] {
 /* 강조 영역 */
 .em-box {
     background: #FFF0F5; border: 1.5px dashed #FF6B9D;
-    border-radius: 8px; padding: 10px 14px; margin-top: 6px;
+    border-radius: 8px; padding: 14px 14px; margin-top: 6px;
+    display: flex; align-items: center; min-height: 48px;
 }
-.em-label { font-size: 11px; color: #CC2266; font-weight: 600; margin-bottom: 6px; }
+.em-label { font-size: 11px; color: #CC2266; font-weight: 600; margin: 0; }
 
 /* 투명 안내 */
 .transp-note { font-size: 11px; color: #AAA; }
