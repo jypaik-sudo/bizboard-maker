@@ -184,7 +184,11 @@ def _draw_text_block(
         cur_x = x + badge_w + 12
         remaining = sub_copy.replace(emphasis_text, "", 1).strip(" ,·") if sub_copy else ""
         if remaining:
-            draw.text((cur_x, sub_y), remaining, font=f_sub, fill=SUB_COLOR)
+            # 배지 높이(SUB_PT) 기준으로 텍스트 세로 가운데 정렬
+            rem_bbox = draw.textbbox((0, 0), remaining, font=f_sub)
+            rem_h = rem_bbox[3] - rem_bbox[1]
+            rem_y = sub_y + (SUB_PT - rem_h) // 2 - rem_bbox[1]
+            draw.text((cur_x, rem_y), remaining, font=f_sub, fill=SUB_COLOR)
 
     elif emphasis_type == "text" and emphasis_text and sub_copy and emphasis_text in sub_copy:
         idx    = sub_copy.index(emphasis_text)
@@ -247,9 +251,9 @@ LOGO_RIGHT_FMTS = {"로고 우측+텍스트", "로고 우측+뱃지"}
 ZONES = {
     # (obj_box, left_text_x|None, left_max_w, right_text_x|None, right_max_w)
     "가운데 오브젝트":    ((180, 5,  535, 253), 20,   150, 555, 445),
-    "텍스트강조":         (None,               55,   860, None, 0),
-    "할인율뱃지":         (None,               55,   860, None, 0),
-    "서브텍스트강조":     (None,               55,   860, None, 0),
+    "텍스트강조":         ((650, 10, 1010, 248), 55,  560, None, 0),
+    "할인율뱃지":         ((650, 10, 1010, 248), 55,  560, None, 0),
+    "서브텍스트강조":     ((650, 10, 1010, 248), 55,  560, None, 0),
     "믹스 텍스트강조":    ((180, 5,  535, 253), 20,   150, 555, 445),
     "믹스 할인율뱃지":    ((180, 5,  535, 253), 20,   150, 555, 445),
     "로고 가운데+텍스트": ((180, 5,  535, 253), None, 0,   555, 445),
@@ -312,20 +316,21 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
         if obj_box and product_images:
             _paste(canvas, product_images[0], obj_box)
 
-    elif obj_box and product_images:
-        # 일반 포맷 — 단독/카테고리/믹스(코디) 배치
-        n = min(len(product_images), 3)
-        if n == 1:
-            _paste(canvas, product_images[0], obj_box)
-        else:
-            bw    = obj_box[2] - obj_box[0]
-            sub_w = bw // n
-            for i in range(n):
-                sub_box = (
-                    obj_box[0] + sub_w * i, obj_box[1],
-                    obj_box[0] + sub_w * (i + 1), obj_box[3],
-                )
-                _paste(canvas, product_images[i], sub_box)
+    elif obj_box:
+        # 일반 포맷 (가운데 오브젝트 / 텍스트강조 계열 우측 존 포함)
+        if product_images:
+            n = min(len(product_images), 3)
+            if n == 1:
+                _paste(canvas, product_images[0], obj_box)
+            else:
+                bw    = obj_box[2] - obj_box[0]
+                sub_w = bw // n
+                for i in range(n):
+                    sub_box = (
+                        obj_box[0] + sub_w * i, obj_box[1],
+                        obj_box[0] + sub_w * (i + 1), obj_box[3],
+                    )
+                    _paste(canvas, product_images[i], sub_box)
 
     # 2. 이모티콘 (상품 색상에 맞게 색조 조화 후 배치)
     if emoji_images and obj_box:
