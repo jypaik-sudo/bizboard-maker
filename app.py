@@ -1,4 +1,4 @@
-"""ABLY 비즈보드 소재 제작기 — 투컬럼 에디터 + 세션 저장"""
+"""ABLY 비즈보드 소재 제작기"""
 from __future__ import annotations
 import io, uuid, zipfile, copy, hashlib, json, os, datetime
 
@@ -9,71 +9,120 @@ from core.emoji import fetch_emoji_candidates, pick_emoji_with_claude, fetch_emo
 
 st.set_page_config(page_title="ABLY 비즈보드 소재 제작기", page_icon="🗂️", layout="wide")
 
-# ── CSS ───────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
+/* ── 기본 ── */
 [data-testid="stHeader"],[data-testid="stToolbar"],#MainMenu,footer{display:none!important}
 [data-testid="stAppViewContainer"]{
     background-color:#EFEFEF!important;
-    background-image:radial-gradient(ellipse 60% 50% at 0% 0%,rgba(180,160,230,.38) 0%,transparent 70%),
-                     radial-gradient(ellipse 55% 45% at 100% 100%,rgba(170,145,225,.32) 0%,transparent 70%)!important;
-    min-height:100vh}
-[data-testid="stMainBlockContainer"]{max-width:1280px;padding:16px 20px 40px}
+    background-image:
+        radial-gradient(ellipse 60% 50% at 0% 0%,rgba(180,160,230,.38) 0%,transparent 70%),
+        radial-gradient(ellipse 55% 45% at 100% 100%,rgba(170,145,225,.32) 0%,transparent 70%)!important;
+}
+[data-testid="stMainBlockContainer"]{max-width:1520px!important;padding:16px 28px 40px!important}
 [data-testid="stMain"]{padding-top:0!important}
-.topbar{display:flex;align-items:center;gap:14px;padding:20px 4px 10px;margin-bottom:16px}
-.ably-badge{display:inline-flex;align-items:center;justify-content:center;background:#FFDE00;
-    padding:0 14px;border-radius:8px;height:44px;font-size:16px;font-weight:900;color:#1a1a1a;
-    letter-spacing:.8px;box-shadow:0 1px 4px rgba(0,0,0,.15);flex-shrink:0}
-.topbar-title{font-size:26px;font-weight:800;color:#1a1a1a;letter-spacing:-.5px;line-height:44px;margin:0}
-.preview-placeholder{height:130px;background:#f0f0f0;border-radius:8px;
-    display:flex;align-items:center;justify-content:center;color:#aaa;font-size:13px}
-div[data-testid="column"] button{border-radius:20px!important;padding:4px 13px!important;
-    font-size:12px!important;font-weight:500!important;border:1.5px solid #E0E0E0!important;
-    background:white!important;color:#555!important;white-space:nowrap!important;
-    min-height:32px!important;height:auto!important;line-height:1.4!important}
-div[data-testid="column"] button:hover{border-color:#9B76E8!important;color:#3A1D96!important}
-div[data-testid="column"] button[kind="primary"]{background:#3A1D96!important;
-    border-color:#3A1D96!important;color:white!important;font-weight:700!important}
-div[data-testid="stTextInput"] input{font-size:13px!important}
-div[data-testid="stTextInput"] label{font-size:11px!important;color:#777!important}
+
+/* ── 헤더 ── */
+.topbar{display:flex;align-items:center;gap:14px;padding:18px 0 12px;margin-bottom:4px}
+.ably-badge{display:inline-flex;align-items:center;justify-content:center;
+    background:#FFDE00;padding:0 16px;border-radius:8px;height:44px;
+    font-size:16px;font-weight:900;color:#1a1a1a;letter-spacing:.8px;
+    box-shadow:0 1px 4px rgba(0,0,0,.15);flex-shrink:0}
+.topbar-title{font-size:26px;font-weight:800;color:#1a1a1a;letter-spacing:-.5px;margin:0}
+
+/* ── 버튼 줄바꿈 방지 (전역) ── */
+button{white-space:nowrap!important}
+button p, button span, button div{white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+
+/* ── 포맷 버튼 (컬럼 안) ── */
+div[data-testid="column"] button{
+    border-radius:18px!important;
+    padding:4px 6px!important;
+    font-size:12px!important;font-weight:500!important;
+    border:1.5px solid #E0E0E0!important;
+    background:white!important;color:#555!important;
+    min-height:30px!important;height:30px!important;
+    line-height:1!important;
+    white-space:nowrap!important;overflow:hidden!important;
+}
+div[data-testid="column"] button p{white-space:nowrap!important;overflow:hidden!important;font-size:12px!important}
+div[data-testid="column"] button:hover{border-color:#9B76E8!important;color:#3A1D96!important;background:white!important}
+div[data-testid="column"] button[kind="primary"]{
+    background:#3A1D96!important;border-color:#3A1D96!important;
+    color:white!important;font-weight:700!important}
+
+/* ── 소재명 input / 소재생성 버튼 높이 맞춤 ── */
+[data-testid="stTextInput"] input{height:42px!important;font-size:14px!important}
+[data-testid="stTextInput"] label{font-size:11px!important;color:#888!important;margin-bottom:2px!important}
+
+/* 소재명 행 버튼들 높이 고정 (소재 생성, 삭제) */
+div[data-testid="stHorizontalBlock"] > div:nth-child(n+2) button{
+    height:42px!important;min-height:42px!important;
+    margin-top:22px;  /* label 높이 보정 */
+    border-radius:8px!important;
+    font-size:13px!important;font-weight:700!important;
+    padding:0 12px!important;
+}
+
+/* ── 섹션 라벨 ── */
+.sec{font-size:11px;font-weight:800;color:#3A1D96;letter-spacing:.04em;margin:12px 0 4px;display:block}
+hr.s{border:none;border-top:1px solid #EEEEEE!important;margin:10px 0!important}
+
+/* ── 좌측 패널 배경 ── */
+[data-testid="stVerticalBlockBorderWrapper"]:has(.left-marker){
+    background:rgba(255,255,255,.78)!important;
+    border-radius:12px!important;
+    border:1px solid rgba(255,255,255,.95)!important;
+    box-shadow:0 1px 5px rgba(58,29,150,.07)!important;
+}
+/* ── 우측 패널 배경 ── */
+[data-testid="stVerticalBlockBorderWrapper"]:has(.right-marker){
+    background:rgba(255,255,255,.45)!important;
+    border-radius:12px!important;
+    border:1px solid rgba(0,0,0,.07)!important;
+}
+
+/* ── 미리보기 플레이스홀더 ── */
+.ph{height:160px;background:#f5f5f5;border-radius:8px;
+    display:flex;align-items:center;justify-content:center;
+    color:#bbb;font-size:13px;border:1.5px dashed #ddd;margin-bottom:10px}
+
+/* ── expander ── */
 details summary{font-size:13px!important;font-weight:600!important}
-hr{margin:10px 0!important}
+
+/* ── 전체 생성 버튼 ── */
+[data-testid="stMainBlockContainer"] > div > div > [data-testid="stButton"]:last-of-type button[kind="primary"]{
+    height:50px!important;font-size:15px!important;border-radius:10px!important}
 </style>
 """, unsafe_allow_html=True)
 
-# ── Session persistence ────────────────────────────────────────────────────────
+# ── 세션 저장 ─────────────────────────────────────────────────────────────────
 SESS_DIR = "sessions"
 os.makedirs(SESS_DIR, exist_ok=True)
+_SKIP = {"product_images","brand_logo","result_png","_prod_hashes",
+         "_brand_logo_hash","reference_image","emoji_candidate_pngs"}
 
-_SKIP_KEYS = {"product_images","brand_logo","result_png","emoji_candidate_pngs",
-              "_prod_hashes","_brand_logo_hash","reference_image"}
+def _sess_path(sid):
+    return os.path.join(SESS_DIR, f"{datetime.date.today().isoformat()}_{sid}.json")
 
-def _sess_path(sid: str) -> str:
-    today = datetime.date.today().isoformat()
-    return os.path.join(SESS_DIR, f"{today}_{sid}.json")
-
-def _save_session(sid: str) -> None:
+def _save(sid):
     try:
-        data = [{k:v for k,v in c.items() if k not in _SKIP_KEYS}
-                for c in st.session_state.creatives]
-        with open(_sess_path(sid), "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-    except Exception:
-        pass
+        with open(_sess_path(sid),"w",encoding="utf-8") as f:
+            json.dump([{k:v for k,v in c.items() if k not in _SKIP}
+                       for c in st.session_state.creatives], f, ensure_ascii=False)
+    except Exception: pass
 
-def _load_session(sid: str) -> list | None:
+def _load(sid):
     try:
         p = _sess_path(sid)
         if os.path.exists(p):
-            with open(p, encoding="utf-8") as f:
-                return json.load(f)
-    except Exception:
-        pass
+            with open(p, encoding="utf-8") as f: return json.load(f)
+    except Exception: pass
     return None
 
-# ── Assets & secrets ──────────────────────────────────────────────────────────
+# ── 에셋 & 시크릿 ─────────────────────────────────────────────────────────────
 @st.cache_resource
-def _logo() -> bytes:
+def _logo():
     with open("assets/logo.png","rb") as f: return f.read()
 
 def _secret(k):
@@ -83,11 +132,24 @@ def _secret(k):
 REMOVEBG_KEY  = _secret("REMOVEBG_API_KEY")
 ANTHROPIC_KEY = _secret("ANTHROPIC_API_KEY")
 
-# ── Format definitions ─────────────────────────────────────────────────────────
+# ── 포맷 정의 ─────────────────────────────────────────────────────────────────
 FORMATS = {
     "기본": ["가운데 오브젝트","텍스트강조","할인율뱃지","서브텍스트강조"],
     "믹스": ["[믹스] 텍스트강조","[믹스] 할인율뱃지"],
     "로고": ["[로고] 가운데+텍스트","[로고] 가운데+뱃지","[로고] 우측+텍스트","[로고] 우측+뱃지"],
+}
+# 버튼 표시 라벨 — 한 줄 유지
+FMT_LABELS = {
+    "가운데 오브젝트":      "오브젝트",
+    "텍스트강조":           "텍스트강조",
+    "할인율뱃지":           "할인율뱃지",
+    "서브텍스트강조":       "서브강조",
+    "[믹스] 텍스트강조":    "텍스트강조",
+    "[믹스] 할인율뱃지":    "할인율뱃지",
+    "[로고] 가운데+텍스트": "가운데+텍스트",
+    "[로고] 가운데+뱃지":   "가운데+뱃지",
+    "[로고] 우측+텍스트":   "우측+텍스트",
+    "[로고] 우측+뱃지":     "우측+뱃지",
 }
 EMPHASIS_TYPE = {
     "텍스트강조":"text","서브텍스트강조":"text",
@@ -95,8 +157,7 @@ EMPHASIS_TYPE = {
     "할인율뱃지":"badge","[믹스] 할인율뱃지":"badge",
     "[로고] 가운데+뱃지":"badge","[로고] 우측+뱃지":"badge",
 }
-HAS_EMPHASIS  = set(EMPHASIS_TYPE.keys())
-EMPHASIS_Q    = {"text":"강조 텍스트","badge":"뱃지 텍스트"}
+HAS_EMPHASIS = set(EMPHASIS_TYPE.keys())
 THREE_FIELD_FMTS = {
     "가운데 오브젝트","[믹스] 텍스트강조","[믹스] 할인율뱃지",
     "[로고] 가운데+텍스트","[로고] 가운데+뱃지",
@@ -105,79 +166,68 @@ LOGO_FMTS = {
     "[로고] 가운데+텍스트","[로고] 가운데+뱃지",
     "[로고] 우측+텍스트","[로고] 우측+뱃지",
 }
+GUIDE = dict(main_size_min=28,main_size_max=62,sub_size_min=18,sub_size_max=50,
+             text_dx_limit=200,text_dy_limit=100,obj_dx_limit=160,obj_dy_limit=80)
 
-GUIDE = dict(
-    main_size_min=28, main_size_max=62,
-    sub_size_min=18,  sub_size_max=50,
-    text_dx_limit=200, text_dy_limit=100,
-    obj_dx_limit=160,  obj_dy_limit=80,
-)
+def _new():
+    return dict(id=str(uuid.uuid4())[:8],name="",format="가운데 오브젝트",
+                main_copy="",sub_copy="",sub_right="",emphasis_text="",
+                emphasis_color="#CC0000",use_recommend=True,
+                product_images=[],brand_logo=None,reference_image=None,
+                object_type="단독",use_emoji=False,emoji_keywords="",
+                emoji_candidates=[],emoji_selected=[],adjustments={},result_png=None)
 
-# ── Creative defaults ──────────────────────────────────────────────────────────
-def _new() -> dict:
-    return dict(
-        id=str(uuid.uuid4())[:8], name="", format="가운데 오브젝트",
-        main_copy="", sub_copy="", sub_right="", emphasis_text="",
-        emphasis_color="#CC0000", use_recommend=True,
-        product_images=[], brand_logo=None, reference_image=None,
-        object_type="단독", use_emoji=False, emoji_keywords="",
-        emoji_candidates=[], emoji_selected=[],
-        adjustments={}, result_png=None,
-    )
+def _merge(s):
+    b=_new(); b.update({k:v for k,v in s.items() if k in b and k not in _SKIP}); return b
 
-def _merge(saved: dict) -> dict:
-    base = _new()
-    base.update({k:v for k,v in saved.items() if k in base and k not in _SKIP_KEYS})
-    return base
-
-# ── Session init ───────────────────────────────────────────────────────────────
+# ── 세션 초기화 ───────────────────────────────────────────────────────────────
 if "sid" not in st.session_state:
-    params = st.query_params
-    st.session_state.sid = params.get("sid", str(uuid.uuid4())[:8])
+    st.session_state.sid = st.query_params.get("sid", str(uuid.uuid4())[:8])
     st.query_params["sid"] = st.session_state.sid
-
 sid = st.session_state.sid
 
 if "creatives" not in st.session_state:
-    saved = _load_session(sid)
+    saved = _load(sid)
     st.session_state.creatives = [_merge(s) for s in saved] if saved else [_new()]
 
-# ── Format selector ────────────────────────────────────────────────────────────
-_MAX_BTNS = max(len(v) for v in FORMATS.values())
-
+# ── 포맷 선택 ─────────────────────────────────────────────────────────────────
 def _set_fmt(cid, fmt):
     for cr in st.session_state.creatives:
-        if cr["id"] == cid:
-            cr["format"] = fmt; break
+        if cr["id"] == cid: cr["format"] = fmt; break
 
 def _fmt_selector(cid, current):
+    # 4개 버튼 그룹은 4열, 2개는 2열 — 레이블 컬럼 없이 버튼만
     for group, fmts in FORMATS.items():
-        shorts = [f.replace("[믹스] ","").replace("[로고] ","") for f in fmts]
-        cols = st.columns([0.7]+[1.8]*_MAX_BTNS)
-        cols[0].markdown(f"<div style='font-size:12px;font-weight:700;color:#888;padding-top:6px'>{group}</div>",
-                         unsafe_allow_html=True)
-        for col,fmt,lbl in zip(cols[1:len(fmts)+1],fmts,shorts):
-            col.button(lbl, key=f"fmt_{cid}_{fmt}",
-                       type="primary" if fmt==current else "secondary",
-                       use_container_width=True, on_click=_set_fmt, args=(cid,fmt))
+        st.markdown(
+            f"<span style='font-size:10px;font-weight:800;color:#AAA;"
+            f"text-transform:uppercase;letter-spacing:.06em'>{group}</span>",
+            unsafe_allow_html=True)
+        cols = st.columns(len(fmts))
+        for col, fmt in zip(cols, fmts):
+            col.button(
+                FMT_LABELS.get(fmt, fmt),
+                key=f"fmt_{cid}_{fmt}",
+                type="primary" if fmt == current else "secondary",
+                use_container_width=True,
+                on_click=_set_fmt, args=(cid, fmt),
+            )
 
-# ── Generate helper ────────────────────────────────────────────────────────────
-def _do_generate(c: dict, logo: bytes) -> bytes | None:
+# ── 생성 로직 ─────────────────────────────────────────────────────────────────
+def _do_gen(c, logo):
     try:
         if c.get("use_recommend") and ANTHROPIC_KEY and c["format"] in HAS_EMPHASIS:
-            c["emphasis_color"] = recommend_color_with_claude(c["main_copy"],c["sub_copy"],ANTHROPIC_KEY)
+            c["emphasis_color"] = recommend_color_with_claude(
+                c["main_copy"], c["sub_copy"], ANTHROPIC_KEY)
         emoji_images = []
         if c.get("use_emoji"):
             kw = c.get("emoji_keywords","") or (c["main_copy"]+" "+c["sub_copy"])
             if not c.get("emoji_candidates"):
                 c["emoji_candidates"] = fetch_emoji_candidates(kw)
             cands = c["emoji_candidates"]
-            sel_urls = c.get("emoji_selected",[])
-            if sel_urls:
-                chosen = [cd for cd in cands if cd["img_url"] in sel_urls]
-            else:
-                chosen = pick_emoji_with_claude(cands,c["main_copy"],c["sub_copy"],ANTHROPIC_KEY)
-            emoji_images = [b for e in chosen if (b:=fetch_emoji_png(e.get("img_url","")))]
+            sel = c.get("emoji_selected",[])
+            chosen = ([cd for cd in cands if cd["img_url"] in sel] if sel
+                      else pick_emoji_with_claude(cands,c["main_copy"],c["sub_copy"],ANTHROPIC_KEY))
+            emoji_images = [b for e in chosen if (b := fetch_emoji_png(e.get("img_url","")))]
         return generate_png({
             "format":        c["format"],
             "main_copy":     c["main_copy"],
@@ -194,206 +244,251 @@ def _do_generate(c: dict, logo: bytes) -> bytes | None:
     except Exception as e:
         st.error(str(e)); return None
 
-# ── Guide validation ───────────────────────────────────────────────────────────
-def _warn_guide(adj: dict) -> None:
-    ms = adj.get("main_size", MAIN_PT)
-    ss = adj.get("sub_size",  SUB_PT)
-    if ms < GUIDE["main_size_min"] or ms > GUIDE["main_size_max"]:
-        st.warning(f"⚠️ 가이드 이탈: 메인 폰트 {ms}px (허용 {GUIDE['main_size_min']}–{GUIDE['main_size_max']}px)")
-    if ss < GUIDE["sub_size_min"] or ss > GUIDE["sub_size_max"]:
-        st.warning(f"⚠️ 가이드 이탈: 서브 폰트 {ss}px (허용 {GUIDE['sub_size_min']}–{GUIDE['sub_size_max']}px)")
+def _warn_guide(adj):
+    ms, ss = adj.get("main_size",MAIN_PT), adj.get("sub_size",SUB_PT)
+    if not (GUIDE["main_size_min"] <= ms <= GUIDE["main_size_max"]):
+        st.warning(f"⚠️ 메인 폰트 {ms}px — 허용 {GUIDE['main_size_min']}–{GUIDE['main_size_max']}px")
+    if not (GUIDE["sub_size_min"] <= ss <= GUIDE["sub_size_max"]):
+        st.warning(f"⚠️ 서브 폰트 {ss}px — 허용 {GUIDE['sub_size_min']}–{GUIDE['sub_size_max']}px")
     if abs(adj.get("text_dx",0)) > GUIDE["text_dx_limit"] or abs(adj.get("text_dy",0)) > GUIDE["text_dy_limit"]:
-        st.warning("⚠️ 가이드 이탈: 텍스트 위치가 안전 영역 밖입니다.")
+        st.warning("⚠️ 텍스트 위치가 안전 영역 밖입니다.")
     if abs(adj.get("obj_dx",0)) > GUIDE["obj_dx_limit"] or abs(adj.get("obj_dy",0)) > GUIDE["obj_dy_limit"]:
-        st.warning("⚠️ 가이드 이탈: 오브젝트 위치가 안전 영역 밖입니다.")
+        st.warning("⚠️ 오브젝트 위치가 안전 영역 밖입니다.")
 
-# ── Left column: form ──────────────────────────────────────────────────────────
-def _form(idx: int, c: dict) -> None:
+# ── 카드 렌더 ─────────────────────────────────────────────────────────────────
+def _card(idx, c, logo):
     cid = c["id"]
     fmt = c["format"]
-    em_type = EMPHASIS_TYPE.get(fmt,"none")
+    em_type = EMPHASIS_TYPE.get(fmt, "none")
+    adj = c.setdefault("adjustments", {})
+    label = f"소재 {idx+1}" + (f"  —  {c['name']}" if c["name"] else "")
 
-    c["name"] = st.text_input("소재명", value=c["name"],
-                               placeholder="예: 에잇세컨즈_믹스", key=f"name_{cid}")
-    st.markdown("**포맷 선택**")
-    _fmt_selector(cid, fmt)
-    st.divider()
+    with st.expander(label, expanded=True):
 
-    st.markdown("**카피**")
-    if fmt in THREE_FIELD_FMTS:
-        c["main_copy"] = st.text_input("메인카피(좌) Bold", value=c["main_copy"],
-                                        placeholder="예: 쫀득 말랑 착화감", key=f"main_{cid}")
-        c["sub_copy"]  = st.text_input("메인카피(우) Bold", value=c["sub_copy"],
-                                        placeholder="예: 착화감 최고", key=f"sub_{cid}")
-        c["sub_right"] = st.text_input("서브카피 Regular",  value=c.get("sub_right",""),
-                                        placeholder="예: 무료배송 + SALE", key=f"subr_{cid}")
-    else:
-        c["main_copy"] = st.text_input("메인카피 Bold", value=c["main_copy"],
-                                        placeholder="예: 지금이 딱 좋아", key=f"main_{cid}")
-        c["sub_copy"]  = st.text_input("서브카피 Regular", value=c["sub_copy"],
-                                        placeholder="예: 무료배송 + SALE", key=f"sub_{cid}")
+        # ── 헤더 행: 소재명 / 소재생성 / 삭제 ──────────────────────────────
+        hc1, hc2, hc3 = st.columns([5, 2, 1])
+        c["name"] = hc1.text_input(
+            "소재명", value=c["name"],
+            placeholder="예: 에잇세컨즈_믹스",
+            key=f"name_{cid}")
+        gen_clicked = hc2.button(
+            "▶ 소재 생성", key=f"gen_{cid}",
+            type="primary", use_container_width=True)
+        del_clicked = hc3.button("🗑", key=f"del_{cid}", use_container_width=True)
 
-    if fmt in HAS_EMPHASIS:
-        _ref = c.get("sub_right","") if fmt in THREE_FIELD_FMTS else c["sub_copy"]
-        c["emphasis_text"] = st.text_input(
-            EMPHASIS_Q[em_type], value=c["emphasis_text"],
-            placeholder="예: 무료배송 / 75%", key=f"em_{cid}")
-        if c["emphasis_text"] and _ref and c["emphasis_text"] not in _ref:
-            st.error(f"'{c['emphasis_text']}'가 서브카피에 없어요.")
-        cr, cc = st.columns(2)
-        c["use_recommend"] = cr.checkbox("AI 색상 추천", value=c.get("use_recommend",True), key=f"rec_{cid}")
-        if not c["use_recommend"]:
-            c["emphasis_color"] = cc.color_picker("강조 색상", value=c.get("emphasis_color","#CC0000"), key=f"clr_{cid}")
+        if gen_clicked:
+            with st.spinner("생성 중…"):
+                r = _do_gen(c, logo)
+                if r: c["result_png"] = r
 
-    st.divider()
-    st.markdown("**오브젝트 이미지**")
-
-    if fmt in LOGO_FMTS:
-        st.caption("브랜드 로고 ✱")
-        lf = st.file_uploader("브랜드 로고", type=["png","jpg","jpeg","webp"],
-                               key=f"blogo_{cid}", label_visibility="collapsed")
-        if lf:
-            raw = lf.getvalue(); h = hashlib.md5(raw).hexdigest()
-            if h != c.get("_brand_logo_hash"):
-                with st.spinner("누끼 처리…"):
-                    c["brand_logo"] = remove_background(raw, REMOVEBG_KEY)
-                c["_brand_logo_hash"] = h
-
-    cl, cp = st.columns(2)
-    with cl:
-        st.caption("레퍼런스 (선택)")
-        rf = st.file_uploader("레퍼런스", type=["png","jpg","jpeg","webp"],
-                               key=f"ref_{cid}", label_visibility="collapsed")
-        if rf: c["reference_image"] = rf.getvalue()
-    with cp:
-        st.caption("상품 이미지 ✱ (1~3장)")
-        prods = st.file_uploader("상품 이미지", type=["png","jpg","jpeg","webp"],
-                                  accept_multiple_files=True, key=f"prod_{cid}",
-                                  label_visibility="collapsed")
-        if prods:
-            raws = [f.getvalue() for f in prods[:3]]
-            hs = [hashlib.md5(b).hexdigest() for b in raws]
-            if hs != c.get("_prod_hashes"):
-                with st.spinner("누끼 처리…"):
-                    c["product_images"] = [remove_background(b, REMOVEBG_KEY) for b in raws]
-                c["_prod_hashes"] = hs
-
-    c["object_type"] = st.radio("배치 타입",["단독","카테고리","믹스(코디)"], horizontal=True,
-                                  index=["단독","카테고리","믹스(코디)"].index(c.get("object_type","단독")),
-                                  key=f"otype_{cid}")
-    st.divider()
-
-    c["use_emoji"] = st.toggle("이모티콘 추가", value=c.get("use_emoji",False), key=f"emoji_{cid}")
-    if c["use_emoji"]:
-        prev_kw = c.get("emoji_keywords","")
-        c["emoji_keywords"] = st.text_input(
-            "이모티콘 키워드", value=prev_kw,
-            placeholder="예: 직장인, 컴퓨터 · 공란이면 카피 기반 자동", key=f"ekw_{cid}")
-        if c["emoji_keywords"] != prev_kw:
-            c["emoji_candidates"] = []  # keyword 바뀌면 후보 초기화
-
-    st.divider()
-    bc1, bc2, _ = st.columns([1.5,1.5,5])
-    if bc1.button("🗑 삭제", key=f"del_{cid}"):
-        st.session_state.creatives = [x for x in st.session_state.creatives if x["id"]!=cid]
-        st.rerun()
-    if bc2.button("📋 복제", key=f"dup_{cid}"):
-        nc = copy.deepcopy(c); nc["id"] = str(uuid.uuid4())[:8]
-        nc["name"] = c["name"]+"_복사"; nc["result_png"] = None
-        i = next(i for i,x in enumerate(st.session_state.creatives) if x["id"]==cid)
-        st.session_state.creatives.insert(i+1, nc); st.rerun()
-
-# ── Right column: preview + controls ──────────────────────────────────────────
-def _preview(idx: int, c: dict, logo: bytes) -> None:
-    cid = c["id"]
-    adj = c.setdefault("adjustments",{})
-
-    # Generate button
-    if st.button("▶ 소재 생성", type="primary", key=f"gen_{cid}", use_container_width=True):
-        with st.spinner("생성 중…"):
-            result = _do_generate(c, logo)
-            if result:
-                c["result_png"] = result
-
-    # Preview
-    if c.get("result_png"):
-        st.image(c["result_png"], use_container_width=True)
-        st.download_button("⬇ PNG 저장", data=c["result_png"],
-                           file_name=f"{c['name'] or f'creative_{idx+1}'}.png",
-                           mime="image/png", key=f"dl_{cid}")
-    else:
-        st.markdown('<div class="preview-placeholder">▶ 소재 생성을 눌러주세요</div>',
-                    unsafe_allow_html=True)
-
-    # ── Adjustments ──────────────────────────────────────────────────────────
-    with st.expander("📐 위치·크기 조정", expanded=False):
-        st.caption("**텍스트 폰트 크기 (px)**")
-        ca, cb = st.columns(2)
-        adj["main_size"] = ca.number_input("메인카피", 20, 70,
-                                            adj.get("main_size", MAIN_PT), key=f"ms_{cid}")
-        adj["sub_size"]  = cb.number_input("서브카피", 14, 55,
-                                            adj.get("sub_size",  SUB_PT),  key=f"ss_{cid}")
-
-        st.caption("**텍스트 블록 이동 (px)**")
-        cc, cd = st.columns(2)
-        adj["text_dx"] = cc.slider("← X →", -200, 200, adj.get("text_dx",0), key=f"tdx_{cid}")
-        adj["text_dy"] = cd.slider("↑ Y ↓", -100, 100, adj.get("text_dy",0), key=f"tdy_{cid}")
-
-        st.caption("**오브젝트 이동 (px)**")
-        ce, cf = st.columns(2)
-        adj["obj_dx"] = ce.slider("← X →", -160, 160, adj.get("obj_dx",0), key=f"odx_{cid}")
-        adj["obj_dy"] = cf.slider("↑ Y ↓", -80,  80,  adj.get("obj_dy",0), key=f"ody_{cid}")
-
-        st.caption("**이모티콘**")
-        cg, ch = st.columns(2)
-        adj["em_size"] = cg.slider("크기 (px)", 24, 90, adj.get("em_size",52), key=f"ems_{cid}")
-        adj["em_hue"]  = ch.slider("색조 (°)", -180, 180, int(adj.get("em_hue",0)), key=f"emh_{cid}")
-
-        _warn_guide(adj)
-
-        if st.button("🔄 조정 반영", key=f"apply_{cid}", use_container_width=True):
-            with st.spinner("재생성 중…"):
-                result = _do_generate(c, logo)
-                if result: c["result_png"] = result
+        if del_clicked:
+            st.session_state.creatives = [x for x in st.session_state.creatives if x["id"] != cid]
             st.rerun()
 
-    # ── Emoji picker ─────────────────────────────────────────────────────────
-    if c.get("use_emoji"):
-        with st.expander("😀 이모티콘 선택", expanded=False):
-            kw = c.get("emoji_keywords","") or (c["main_copy"]+" "+c["sub_copy"])
-            if not c.get("emoji_candidates"):
-                c["emoji_candidates"] = fetch_emoji_candidates(kw)
+        st.divider()
 
-            cands = c.get("emoji_candidates",[])
-            sel_urls = set(c.get("emoji_selected",[]))
+        # ── 본문 2열: 좌(폼) / 우(미리보기+조정) ────────────────────────────
+        col_l, col_r = st.columns([10, 11], gap="large")
 
-            if cands:
-                st.caption(f"키워드 '{kw}' 기반 후보 (최대 2개 선택)")
-                per_row = 5
-                for i in range(0, len(cands), per_row):
-                    chunk = cands[i:i+per_row]
-                    cols = st.columns(len(chunk))
-                    for j, cand in enumerate(chunk):
-                        with cols[j]:
-                            png = fetch_emoji_png(cand["img_url"])
-                            if png:
-                                st.image(png, width=44)
-                            url = cand["img_url"]
-                            is_sel = url in sel_urls
-                            if st.button("✓" if is_sel else "＋",
-                                         key=f"epick_{cid}_{i+j}",
-                                         type="primary" if is_sel else "secondary"):
-                                if is_sel:
-                                    c["emoji_selected"] = [u for u in c.get("emoji_selected",[]) if u!=url]
-                                else:
-                                    cur = c.get("emoji_selected",[])
-                                    c["emoji_selected"] = (cur[1:]+[url]) if len(cur)>=2 else cur+[url]
-                                c["emoji_candidates"] = cands
-                                st.rerun()
-            else:
-                st.caption("키워드를 입력하면 이모티콘 후보가 표시됩니다.")
+        # ── 좌측 폼 ─────────────────────────────────────────────────────────
+        with col_l:
+            with st.container(border=True):
+                st.markdown('<span class="left-marker"></span>', unsafe_allow_html=True)
 
-# ── Header ─────────────────────────────────────────────────────────────────────
+                # 포맷
+                st.markdown('<span class="sec">포맷 선택</span>', unsafe_allow_html=True)
+                _fmt_selector(cid, fmt)
+                st.markdown('<hr class="s">', unsafe_allow_html=True)
+
+                # 카피
+                st.markdown('<span class="sec">카피</span>', unsafe_allow_html=True)
+                if fmt in THREE_FIELD_FMTS:
+                    c["main_copy"] = st.text_input(
+                        "메인카피(좌) Bold", value=c["main_copy"],
+                        placeholder="예: 쫀득 말랑 착화감", key=f"main_{cid}")
+                    c["sub_copy"]  = st.text_input(
+                        "메인카피(우) Bold", value=c["sub_copy"],
+                        placeholder="예: 착화감 최고", key=f"sub_{cid}")
+                    c["sub_right"] = st.text_input(
+                        "서브카피 Regular", value=c.get("sub_right",""),
+                        placeholder="예: 무료배송 + SALE", key=f"subr_{cid}")
+                else:
+                    c["main_copy"] = st.text_input(
+                        "메인카피 Bold", value=c["main_copy"],
+                        placeholder="예: 지금이 딱 좋아", key=f"main_{cid}")
+                    c["sub_copy"]  = st.text_input(
+                        "서브카피 Regular", value=c["sub_copy"],
+                        placeholder="예: 무료배송 + SALE", key=f"sub_{cid}")
+
+                if fmt in HAS_EMPHASIS:
+                    _ref = c.get("sub_right","") if fmt in THREE_FIELD_FMTS else c["sub_copy"]
+                    q_label = "강조 텍스트" if em_type == "text" else "뱃지 텍스트"
+                    c["emphasis_text"] = st.text_input(
+                        q_label, value=c["emphasis_text"],
+                        placeholder="예: 무료배송 / 75%", key=f"em_{cid}")
+                    if c["emphasis_text"] and _ref and c["emphasis_text"] not in _ref:
+                        st.error(f"'{c['emphasis_text']}'가 서브카피에 없어요.")
+                    cr_, cc_ = st.columns(2)
+                    c["use_recommend"] = cr_.checkbox(
+                        "AI 색상 추천", value=c.get("use_recommend",True), key=f"rec_{cid}")
+                    if not c["use_recommend"]:
+                        c["emphasis_color"] = cc_.color_picker(
+                            "강조 색상", value=c.get("emphasis_color","#CC0000"), key=f"clr_{cid}")
+
+                st.markdown('<hr class="s">', unsafe_allow_html=True)
+
+                # 이미지
+                st.markdown('<span class="sec">오브젝트 이미지</span>', unsafe_allow_html=True)
+                if fmt in LOGO_FMTS:
+                    st.caption("브랜드 로고 ✱ (자동 누끼)")
+                    lf = st.file_uploader("브랜드 로고", type=["png","jpg","jpeg","webp"],
+                                           key=f"blogo_{cid}", label_visibility="collapsed")
+                    if lf:
+                        raw = lf.getvalue(); h = hashlib.md5(raw).hexdigest()
+                        if h != c.get("_brand_logo_hash"):
+                            with st.spinner("누끼 처리…"):
+                                c["brand_logo"] = remove_background(raw, REMOVEBG_KEY)
+                            c["_brand_logo_hash"] = h
+
+                ci1, ci2 = st.columns(2)
+                with ci1:
+                    st.caption("레퍼런스 (선택)")
+                    rf = st.file_uploader("ref", type=["png","jpg","jpeg","webp"],
+                                           key=f"ref_{cid}", label_visibility="collapsed")
+                    if rf: c["reference_image"] = rf.getvalue()
+                with ci2:
+                    st.caption("상품 이미지 ✱  1~3장 · 자동 누끼")
+                    prods = st.file_uploader(
+                        "prod", type=["png","jpg","jpeg","webp"],
+                        accept_multiple_files=True, key=f"prod_{cid}",
+                        label_visibility="collapsed")
+                    if prods:
+                        raws = [f.getvalue() for f in prods[:3]]
+                        hs = [hashlib.md5(b).hexdigest() for b in raws]
+                        if hs != c.get("_prod_hashes"):
+                            with st.spinner("누끼 처리…"):
+                                c["product_images"] = [remove_background(b, REMOVEBG_KEY) for b in raws]
+                            c["_prod_hashes"] = hs
+
+                c["object_type"] = st.radio(
+                    "배치 타입", ["단독","카테고리","믹스(코디)"], horizontal=True,
+                    index=["단독","카테고리","믹스(코디)"].index(c.get("object_type","단독")),
+                    key=f"otype_{cid}")
+
+                st.markdown('<hr class="s">', unsafe_allow_html=True)
+
+                # 이모티콘 + 복제
+                ec1, ec2 = st.columns([3,1])
+                c["use_emoji"] = ec1.toggle(
+                    "이모티콘 추가", value=c.get("use_emoji",False), key=f"emoji_{cid}")
+                ec2.button("📋 복제", key=f"dup_{cid}", use_container_width=True,
+                           on_click=lambda: _dup(cid))
+                if c["use_emoji"]:
+                    prev_kw = c.get("emoji_keywords","")
+                    c["emoji_keywords"] = st.text_input(
+                        "이모티콘 키워드", value=prev_kw,
+                        placeholder="예: 직장인, 컴퓨터 · 공란이면 카피 기반 자동",
+                        key=f"ekw_{cid}")
+                    if c["emoji_keywords"] != prev_kw:
+                        c["emoji_candidates"] = []
+
+        # ── 우측 미리보기 + 조정 ────────────────────────────────────────────
+        with col_r:
+            with st.container(border=True):
+                st.markdown('<span class="right-marker"></span>', unsafe_allow_html=True)
+
+                # 미리보기
+                if c.get("result_png"):
+                    st.image(c["result_png"], use_container_width=True)
+                    st.download_button(
+                        "⬇ PNG 저장", data=c["result_png"],
+                        file_name=f"{c['name'] or f'creative_{idx+1}'}.png",
+                        mime="image/png", key=f"dl_{cid}",
+                        use_container_width=True)
+                else:
+                    st.markdown('<div class="ph">▶ 소재 생성을 눌러주세요</div>',
+                                unsafe_allow_html=True)
+
+                # 조정
+                with st.expander("📐 위치·크기 조정"):
+                    ca, cb = st.columns(2)
+                    adj["main_size"] = ca.number_input(
+                        "메인카피 폰트 (px)", 20, 70, adj.get("main_size",MAIN_PT), key=f"ms_{cid}")
+                    adj["sub_size"]  = cb.number_input(
+                        "서브카피 폰트 (px)", 14, 55, adj.get("sub_size",SUB_PT),   key=f"ss_{cid}")
+
+                    st.caption("텍스트 블록 이동")
+                    cc, cd = st.columns(2)
+                    adj["text_dx"] = cc.slider("← X →", -200, 200, adj.get("text_dx",0), key=f"tdx_{cid}")
+                    adj["text_dy"] = cd.slider("↑ Y ↓", -100, 100, adj.get("text_dy",0), key=f"tdy_{cid}")
+
+                    st.caption("오브젝트 이동")
+                    ce, cf = st.columns(2)
+                    adj["obj_dx"] = ce.slider("← X →", -160, 160, adj.get("obj_dx",0), key=f"odx_{cid}")
+                    adj["obj_dy"] = cf.slider("↑ Y ↓",  -80,  80, adj.get("obj_dy",0), key=f"ody_{cid}")
+
+                    st.caption("이모티콘")
+                    cg, ch = st.columns(2)
+                    adj["em_size"] = cg.slider("크기 (px)", 24, 90, adj.get("em_size",52), key=f"ems_{cid}")
+                    adj["em_hue"]  = ch.slider("색조 (°)", -180, 180, int(adj.get("em_hue",0)), key=f"emh_{cid}")
+
+                    _warn_guide(adj)
+
+                    if st.button("🔄 조정 반영 (재생성)", key=f"apply_{cid}", use_container_width=True):
+                        with st.spinner("재생성 중…"):
+                            r = _do_gen(c, logo)
+                            if r: c["result_png"] = r
+                        st.rerun()
+
+                # 이모티콘 픽커
+                if c.get("use_emoji"):
+                    with st.expander("😀 이모티콘 선택"):
+                        kw = c.get("emoji_keywords","") or (c["main_copy"]+" "+c["sub_copy"])
+                        if not c.get("emoji_candidates"):
+                            c["emoji_candidates"] = fetch_emoji_candidates(kw)
+                        cands = c.get("emoji_candidates",[])
+                        sel_urls = set(c.get("emoji_selected",[]))
+
+                        if cands:
+                            st.caption(f"'{kw}' 기반 추천 · 최대 2개 선택")
+                            per = 5
+                            for ri in range(0, len(cands), per):
+                                chunk = cands[ri:ri+per]
+                                pcols = st.columns(len(chunk))
+                                for j, cand in enumerate(chunk):
+                                    with pcols[j]:
+                                        png = fetch_emoji_png(cand["img_url"])
+                                        if png: st.image(png, width=44)
+                                        url = cand["img_url"]
+                                        is_sel = url in sel_urls
+                                        if st.button(
+                                            "✓" if is_sel else "＋",
+                                            key=f"ep_{cid}_{ri+j}",
+                                            type="primary" if is_sel else "secondary",
+                                        ):
+                                            if is_sel:
+                                                c["emoji_selected"] = [u for u in c.get("emoji_selected",[]) if u!=url]
+                                            else:
+                                                cur = c.get("emoji_selected",[])
+                                                c["emoji_selected"] = (cur[1:]+[url]) if len(cur)>=2 else cur+[url]
+                                            c["emoji_candidates"] = cands
+                                            st.rerun()
+                        else:
+                            st.caption("키워드를 입력하면 후보가 표시됩니다.")
+
+
+def _dup(cid):
+    for i, x in enumerate(st.session_state.creatives):
+        if x["id"] == cid:
+            nc = copy.deepcopy(x)
+            nc["id"] = str(uuid.uuid4())[:8]
+            nc["name"] = x["name"]+"_복사"
+            nc["result_png"] = None
+            st.session_state.creatives.insert(i+1, nc)
+            break
+
+
+# ── 헤더 ─────────────────────────────────────────────────────────────────────
 st.markdown(
     '<div class="topbar">'
     '<span class="ably-badge">ABLY</span>'
@@ -403,15 +498,9 @@ st.markdown(
 
 logo_bytes = _logo()
 
-# ── Render each creative ───────────────────────────────────────────────────────
+# ── 소재 목록 ─────────────────────────────────────────────────────────────────
 for i, c in enumerate(st.session_state.creatives):
-    label = f"소재 {i+1}" + (f" — {c['name']}" if c["name"] else "")
-    with st.expander(label, expanded=True):
-        col_l, col_r = st.columns([5, 6])
-        with col_l:
-            _form(i, c)
-        with col_r:
-            _preview(i, c, logo_bytes)
+    _card(i, c, logo_bytes)
 
 st.write("")
 
@@ -420,16 +509,14 @@ if st.button("＋ 소재 추가", use_container_width=True):
 
 st.write("")
 
-# ── Generate all ───────────────────────────────────────────────────────────────
 if st.button("▶ 전체 소재 생성", type="primary", use_container_width=True):
     with st.spinner("전체 생성 중…"):
         for c in st.session_state.creatives:
-            result = _do_generate(c, logo_bytes)
-            if result: c["result_png"] = result
+            r = _do_gen(c, logo_bytes)
+            if r: c["result_png"] = r
     st.success(f"✅ {len(st.session_state.creatives)}개 완료!")
     st.rerun()
 
-# ── ZIP download ───────────────────────────────────────────────────────────────
 done = [c for c in st.session_state.creatives if c.get("result_png")]
 if done:
     buf = io.BytesIO()
@@ -437,9 +524,8 @@ if done:
         for i,c in enumerate(done):
             zf.writestr(f"{c['name'] or f'creative_{i+1}'}.png", c["result_png"])
     buf.seek(0)
-    st.download_button(f"⬇ 전체 ZIP ({len(done)}개)", data=buf,
-                       file_name="bizboard.zip", mime="application/zip",
-                       use_container_width=True)
+    st.download_button(
+        f"⬇ 전체 ZIP ({len(done)}개)", data=buf,
+        file_name="bizboard.zip", mime="application/zip", use_container_width=True)
 
-# ── Auto-save ──────────────────────────────────────────────────────────────────
-_save_session(sid)
+_save(sid)
