@@ -1,10 +1,8 @@
 from __future__ import annotations
 import re
 import requests
-from bs4 import BeautifulSoup
 
-PILIAPP_BASE = "https://kr.piliapp.com/apple-emoji/search/?q="
-TWEMOJI_CDN  = "https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/{}.png"
+TWEMOJI_CDN = "https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/{}.png"
 
 # 한국어 키워드 → Twemoji hex 코드 (piliapp 스크래핑 실패 시 폴백)
 _KO_TWEMOJI: dict[str, list[str]] = {
@@ -189,33 +187,8 @@ def _twemoji_candidates(keywords: str) -> list[dict]:
 
 
 def fetch_emoji_candidates(keywords: str) -> list[dict]:
-    results: list[dict] = []
-    for kw in [k.strip() for k in keywords.replace(",", " ").split() if k.strip()]:
-        try:
-            url  = PILIAPP_BASE + requests.utils.quote(kw)
-            resp = requests.get(url, timeout=8,
-                                headers={"User-Agent": "Mozilla/5.0"})
-            soup = BeautifulSoup(resp.text, "html.parser")
-            for item in soup.select("li.emoji-item")[:5]:
-                char    = item.get("data-emoji", "")
-                name    = item.get("title", "")
-                img_tag = item.select_one("img")
-                img_url = img_tag["src"] if img_tag and img_tag.get("src") else ""
-                if char:
-                    results.append({
-                        "name":    name,
-                        "char":    char,
-                        "img_url": img_url,
-                        "keyword": kw,
-                    })
-        except Exception:
-            pass
-
-    # piliapp 실패 / 결과 없음 → Twemoji 폴백
-    if not results:
-        results = _twemoji_candidates(keywords)
-
-    return results
+    """키워드 → Twemoji 후보 반환. 직접 매핑 우선, 없으면 기본 sparkle."""
+    return _twemoji_candidates(keywords)
 
 
 def pick_emoji_with_claude(

@@ -11,11 +11,11 @@ ASSETS = Path(__file__).parent.parent / "assets"
 FONT_BOLD    = ASSETS / "Pretendard-Bold.otf"
 FONT_REGULAR = ASSETS / "Pretendard-Regular.otf"
 
-MAIN_PT      = 45
-LEFT_MAIN_PT = 32   # 좌측 텍스트 존 (가운데/믹스) 폰트 크기 — 피그마 비율 기준
-SUB_PT       = 36
-BADGE_H      = 40            # 뱃지 높이 — 피그마 실측 ~38-40px
-GAP          = 20   # main ↔ sub gap
+MAIN_PT      = 47   # 피그마 실측 47px
+LEFT_MAIN_PT = 32
+SUB_PT       = 39   # 피그마 실측 39px
+BADGE_H      = 50   # 피그마: text-[24px] + py-[13px]*2 = 50px
+GAP          = 14   # 피그마: sub_y(138) - main_y(77) - main_h(47) ≈ 14px
 LOGO_H       = 24   # ABLY 로고 높이 (피그마 실측 21px, 가시성 고려 24px)
 LOGO_PAD     = (50, 24)   # (right_margin, top) — 피그마: x=878, y=24, w≈101
 
@@ -147,10 +147,10 @@ def _draw_badge(
     font = _font(True, font_size)
     bbox = draw.textbbox((0, 0), text, font=font)
     tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
-    px = 14   # 수평 패딩
+    px = 9    # 피그마: px-[9px]
     bw = tw + px * 2
-    bh = BADGE_H   # 40px — 피그마 실측 기준
-    draw.rounded_rectangle([x, y, x + bw, y + bh], radius=9, fill=color)
+    bh = BADGE_H   # 50px — 피그마: text-24px + py-13px*2
+    draw.rounded_rectangle([x, y, x + bw, y + bh], radius=8, fill=color)
     draw.text(
         (x + px, y + (bh - th) // 2 - bbox[1]),
         text, font=font, fill=(255, 255, 255),
