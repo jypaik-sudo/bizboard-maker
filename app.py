@@ -320,7 +320,7 @@ def _card(idx: int, c: dict):
                 "브랜드 로고", type=["png","jpg","jpeg","webp"],
                 key=f"blogo_{cid}", label_visibility="collapsed")
             if logo_file:
-                raw = logo_file.read()
+                raw = logo_file.getvalue()
                 if REMOVEBG_KEY:
                     with st.spinner("누끼 처리 중…"):
                         c["brand_logo"] = remove_background(raw, REMOVEBG_KEY)
@@ -336,7 +336,7 @@ def _card(idx: int, c: dict):
             ref = st.file_uploader("레퍼런스", type=["png","jpg","jpeg","webp"],
                                    key=f"ref_{cid}", label_visibility="collapsed")
             if ref:
-                c["reference_image"] = ref.read()
+                c["reference_image"] = ref.getvalue()
                 st.image(c["reference_image"], use_container_width=True)
         with col_prod:
             st.caption("상품 이미지 ✱ (1~3장)")
@@ -344,7 +344,7 @@ def _card(idx: int, c: dict):
                                      accept_multiple_files=True, key=f"prod_{cid}",
                                      label_visibility="collapsed")
             if prods:
-                raws = [f.read() for f in prods[:3]]
+                raws = [f.getvalue() for f in prods[:3]]
                 if REMOVEBG_KEY:
                     with st.spinner("배경 제거 중…"):
                         c["product_images"] = [remove_background(b, REMOVEBG_KEY) for b in raws]

@@ -163,8 +163,10 @@ def _draw_text_block(
     if emphasis_type == "badge" and emphasis_text:
         badge_w = _draw_badge(draw, x, sub_y, emphasis_text, em_rgb)
         cur_x = x + badge_w + 12
-        if sub_copy:
-            draw.text((cur_x, sub_y), sub_copy, font=f_sub, fill=SUB_COLOR)
+        # emphasis_text를 sub_copy에서 제거한 나머지만 표시 (중복 방지)
+        remaining = sub_copy.replace(emphasis_text, "", 1).strip(" ,·") if sub_copy else ""
+        if remaining:
+            draw.text((cur_x, sub_y), remaining, font=f_sub, fill=SUB_COLOR)
 
     elif emphasis_type == "text" and emphasis_text and sub_copy and emphasis_text in sub_copy:
         idx    = sub_copy.index(emphasis_text)
@@ -218,8 +220,9 @@ def _draw_three_line_block(
     if has3:
         if emphasis_type == "badge" and emphasis_text:
             bw = _draw_badge(draw, x, y3, emphasis_text, em_rgb)
-            if line3:
-                draw.text((x + bw + 12, y3), line3, font=f3, fill=SUB_COLOR)
+            remaining3 = line3.replace(emphasis_text, "", 1).strip(" ,·") if line3 else ""
+            if remaining3:
+                draw.text((x + bw + 12, y3), remaining3, font=f3, fill=SUB_COLOR)
         elif emphasis_type == "text" and emphasis_text and line3 and emphasis_text in line3:
             idx = line3.index(emphasis_text)
             before, after = line3[:idx], line3[idx + len(emphasis_text):]
