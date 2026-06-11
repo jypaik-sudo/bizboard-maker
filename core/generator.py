@@ -14,9 +14,13 @@ FONT_REGULAR = ASSETS / "Pretendard-Regular.otf"
 MAIN_PT      = 45
 LEFT_MAIN_PT = 32   # 좌측 텍스트 존 (가운데/믹스) 폰트 크기 — 피그마 비율 기준
 SUB_PT       = 36
+BADGE_H      = SUB_PT + 16   # 뱃지 높이 = 52 (상하 8px 여백)
 GAP          = 20   # main ↔ sub gap
 LOGO_H       = 24   # ABLY 로고 높이 (피그마 실측 21px, 가시성 고려 24px)
 LOGO_PAD     = (50, 24)   # (right_margin, top) — 피그마: x=878, y=24, w≈101
+
+# ABLY 로고 회피 영역: 우측 상단 (이모티콘 배치 시 제외)
+_ABLY_SAFE_X = 830   # 이 x 좌표 이상 + y < 55 이면 ABLY 영역
 
 MAIN_COLOR = (76, 76, 76)
 SUB_COLOR  = (119, 119, 119)
@@ -143,10 +147,10 @@ def _draw_badge(
     font = _font(True, font_size)
     bbox = draw.textbbox((0, 0), text, font=font)
     tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
-    px = 12
+    px = 14   # 수평 패딩
     bw = tw + px * 2
-    bh = SUB_PT
-    draw.rounded_rectangle([x, y, x + bw, y + bh], radius=7, fill=color)
+    bh = BADGE_H   # SUB_PT+16 — 상하 여백 여유있게
+    draw.rounded_rectangle([x, y, x + bw, y + bh], radius=9, fill=color)
     draw.text(
         (x + px, y + (bh - th) // 2 - bbox[1]),
         text, font=font, fill=(255, 255, 255),
@@ -168,7 +172,8 @@ def _draw_text_block(
     em_rgb     = _hex(emphasis_color)
 
     has_sub = bool(sub_copy) or (emphasis_type != "none" and emphasis_text)
-    total_h = MAIN_PT + (GAP + SUB_PT if has_sub else 0)
+    _sub_h  = BADGE_H if (emphasis_type == "badge" and emphasis_text) else SUB_PT
+    total_h = MAIN_PT + (GAP + _sub_h if has_sub else 0)
     y = y_center - total_h // 2
 
     if main_copy:
@@ -187,7 +192,7 @@ def _draw_text_block(
             # 배지 높이(SUB_PT) 기준으로 텍스트 세로 가운데 정렬
             rem_bbox = draw.textbbox((0, 0), remaining, font=f_sub)
             rem_h = rem_bbox[3] - rem_bbox[1]
-            rem_y = sub_y + (SUB_PT - rem_h) // 2 - rem_bbox[1]
+            rem_y = sub_y + (BADGE_H - rem_h) // 2 - rem_bbox[1]
             draw.text((cur_x, rem_y), remaining, font=f_sub, fill=SUB_COLOR)
 
     elif emphasis_type == "text" and emphasis_text and sub_copy and emphasis_text in sub_copy:
@@ -332,22 +337,36 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
                     )
                     _paste(canvas, product_images[i], sub_box)
 
-    # 2. 이모티콘 (상품 색상에 맞게 색조 조화 후 배치)
+    # 2. 이모티콘 — 대각 배치 (상품 주변), ABLY 로고 회피
     if emoji_images and obj_box:
         _palette_src = product_images[0] if product_images else (brand_logo or None)
         _palette = _dominant_color(_palette_src) if _palette_src else None
-        em_size = 56
-        em_x = obj_box[2] - em_size - 5
-        em_y = obj_box[1] + 5
-        for eb in emoji_images[:2]:
+        em_size = 52
+        x0, y0, x1, y1 = obj_box
+
+        # 위치 1: 상단 우측 — ABLY 영역(x>830, y<55)이면 상단 좌측으로
+        p1x = x1 - em_size - 8
+        p1y = y0 + 8
+        if p1x + em_size > _ABLY_SAFE_X and p1y < 55:
+            p1x = x0 + 8   # 상단 좌측으로 이동
+
+        # 위치 2: 하단 반대편 (위치1이 우측이면 하단 좌측, 좌측이면 하단 우측)
+        if p1x == x0 + 8:
+            p2x = x1 - em_size - 8
+        else:
+            p2x = x0 + 8
+        p2y = y1 - em_size - 8
+
+        em_positions = [(p1x, p1y), (p2x, p2y)]
+
+        for pos, eb in zip(em_positions, emoji_images[:2]):
             try:
                 em = Image.open(io.BytesIO(eb)).convert("RGBA").resize(
                     (em_size, em_size), Image.LANCZOS
                 )
                 if _palette:
                     em = _harmonize_emoji(em, _palette)
-                canvas.paste(em, (em_x, em_y), em.split()[3])
-                em_x -= em_size + 4
+                canvas.paste(em, pos, em.split()[3])
             except Exception:
                 pass
 
