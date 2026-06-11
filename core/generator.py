@@ -11,11 +11,12 @@ ASSETS = Path(__file__).parent.parent / "assets"
 FONT_BOLD    = ASSETS / "Pretendard-Bold.otf"
 FONT_REGULAR = ASSETS / "Pretendard-Regular.otf"
 
-MAIN_PT   = 45
-SUB_PT    = 36
-GAP       = 20   # main ↔ sub
-LOGO_H    = 38
-LOGO_PAD  = (20, 14)   # right, top
+MAIN_PT      = 45
+LEFT_MAIN_PT = 32   # 좌측 텍스트 존 (가운데/믹스) 폰트 크기 — 피그마 비율 기준
+SUB_PT       = 36
+GAP          = 20   # main ↔ sub gap
+LOGO_H       = 24   # ABLY 로고 높이 (피그마 실측 21px, 가시성 고려 24px)
+LOGO_PAD     = (50, 24)   # (right_margin, top) — 피그마: x=878, y=24, w≈101
 
 MAIN_COLOR = (76, 76, 76)
 SUB_COLOR  = (119, 119, 119)
@@ -89,10 +90,9 @@ def _harmonize_emoji(
             new_pixels.append((r, g, b, a))
             continue
         h, s, v = colorsys.rgb_to_hsv(r / 255.0, g / 255.0, b / 255.0)
-        if s < 0.12 or v < 0.15:  # 무채색·어두운 픽셀은 그대로
+        if s < 0.12 or v < 0.15:
             new_pixels.append((r, g, b, a))
             continue
-        # hue를 target 방향으로 strength만큼 이동 (최단 경로)
         diff = th - h
         if diff > 0.5:
             diff -= 1.0
@@ -111,6 +111,27 @@ def _text_w(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.FreeTypeFont) 
     return draw.textbbox((0, 0), text, font=font)[2]
 
 
+def _wrap_text(
+    draw: ImageDraw.ImageDraw, text: str,
+    font: ImageFont.FreeTypeFont, max_w: int,
+) -> list[str]:
+    """공백 기준으로 max_w 안에 들어오게 줄바꿈."""
+    words = text.split()
+    lines: list[str] = []
+    current = ""
+    for word in words:
+        test = (current + " " + word).strip()
+        if _text_w(draw, test, font) <= max_w:
+            current = test
+        else:
+            if current:
+                lines.append(current)
+            current = word
+    if current:
+        lines.append(current)
+    return lines or [text]
+
+
 def _draw_badge(
     draw: ImageDraw.ImageDraw,
     x: int, y: int,
@@ -122,7 +143,7 @@ def _draw_badge(
     font = _font(True, font_size)
     bbox = draw.textbbox((0, 0), text, font=font)
     tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
-    px, py = 12, 6
+    px = 12
     bw = tw + px * 2
     bh = SUB_PT
     draw.rounded_rectangle([x, y, x + bw, y + bh], radius=7, fill=color)
@@ -139,7 +160,7 @@ def _draw_text_block(
     main_copy: str, sub_copy: str,
     emphasis_text: str = "",
     emphasis_color: str = "#CC0000",
-    emphasis_type: str = "none",   # "text" | "badge" | "none"
+    emphasis_type: str = "none",
 ) -> None:
     f_main     = _font(True,  MAIN_PT)
     f_sub      = _font(False, SUB_PT)
@@ -150,7 +171,6 @@ def _draw_text_block(
     total_h = MAIN_PT + (GAP + SUB_PT if has_sub else 0)
     y = y_center - total_h // 2
 
-    # Main copy
     if main_copy:
         draw.text((x, y), main_copy, font=f_main, fill=MAIN_COLOR)
 
@@ -159,11 +179,9 @@ def _draw_text_block(
 
     sub_y = y + MAIN_PT + GAP
 
-    # Sub copy with optional emphasis
     if emphasis_type == "badge" and emphasis_text:
         badge_w = _draw_badge(draw, x, sub_y, emphasis_text, em_rgb)
         cur_x = x + badge_w + 12
-        # emphasis_text를 sub_copy에서 제거한 나머지만 표시 (중복 방지)
         remaining = sub_copy.replace(emphasis_text, "", 1).strip(" ,·") if sub_copy else ""
         if remaining:
             draw.text((cur_x, sub_y), remaining, font=f_sub, fill=SUB_COLOR)
@@ -186,141 +204,133 @@ def _draw_text_block(
             draw.text((x, sub_y), sub_copy, font=f_sub, fill=SUB_COLOR)
 
 
-# ── three-line single-zone block (믹스) ──────────────────────────────────────
-
-def _draw_three_line_block(
+def _draw_left_zone(
     draw: ImageDraw.ImageDraw,
     x: int, y_center: int,
-    line1: str, line2: str, line3: str,
-    emphasis_text: str = "",
-    emphasis_color: str = "#CC0000",
-    emphasis_type: str = "none",
+    text: str, max_w: int,
 ) -> None:
-    """line1, line2: Bold MAIN_COLOR MAIN_PT; line3: Regular/emphasis SUB_PT."""
-    f1     = _font(True,  MAIN_PT)
-    f2     = _font(True,  MAIN_PT)
-    f3     = _font(False, SUB_PT)
-    f3b    = _font(True,  SUB_PT)
-    em_rgb = _hex(emphasis_color)
-
-    has2 = bool(line2)
-    has3 = bool(line3) or (emphasis_type != "none" and emphasis_text)
-    total_h = MAIN_PT
-    if has2: total_h += GAP + MAIN_PT
-    if has3: total_h += GAP + SUB_PT
+    """좌측 텍스트 존 — LEFT_MAIN_PT Bold, 공백 기준 줄바꿈, 세로 가운데 정렬."""
+    if not text:
+        return
+    font = _font(True, LEFT_MAIN_PT)
+    lines = _wrap_text(draw, text, font, max_w)
+    line_h = LEFT_MAIN_PT + 6
+    total_h = len(lines) * line_h - 6
     y = y_center - total_h // 2
-
-    if line1:
-        draw.text((x, y), line1, font=f1, fill=MAIN_COLOR)
-    y2 = y + MAIN_PT + GAP
-    if has2:
-        draw.text((x, y2), line2, font=f2, fill=MAIN_COLOR)
-    y3 = y2 + (MAIN_PT if has2 else 0) + GAP
-
-    if has3:
-        if emphasis_type == "badge" and emphasis_text:
-            bw = _draw_badge(draw, x, y3, emphasis_text, em_rgb)
-            remaining3 = line3.replace(emphasis_text, "", 1).strip(" ,·") if line3 else ""
-            if remaining3:
-                draw.text((x + bw + 12, y3), remaining3, font=f3, fill=SUB_COLOR)
-        elif emphasis_type == "text" and emphasis_text and line3 and emphasis_text in line3:
-            idx = line3.index(emphasis_text)
-            before, after = line3[:idx], line3[idx + len(emphasis_text):]
-            cx = x
-            if before:
-                draw.text((cx, y3), before, font=f3, fill=SUB_COLOR)
-                cx += _text_w(draw, before, f3)
-            draw.text((cx, y3), emphasis_text, font=f3b, fill=em_rgb)
-            cx += _text_w(draw, emphasis_text, f3b)
-            if after:
-                draw.text((cx, y3), after, font=f3, fill=SUB_COLOR)
-        else:
-            if line3:
-                draw.text((x, y3), line3, font=f3, fill=SUB_COLOR)
+    for line in lines:
+        draw.text((x, y), line, font=font, fill=MAIN_COLOR)
+        y += line_h
 
 
 # ── layout zones per format ───────────────────────────────────────────────────
+#
+# 피그마 실측 (1029×258 캔버스, 노드 3506-221 SKINFOOD 기준):
+#   브랜드 로고 존:  x=5–175 (LEFT)
+#   상품 오브젝트:   x=180–535 (CENTER)
+#   카피 텍스트:     x=555–975 (RIGHT)
+#   ABLY 로고:       x=878, y=24, w≈101, h≈21
 
-PAD = 20   # general inner padding
-
-# two text zones (object center): left=main_copy, right=sub_copy+sub_right
-CENTER_FMTS = {"가운데 오브젝트", "로고 가운데+텍스트", "로고 가운데+뱃지"}
-# three-line single zone (object left, 3 text lines right)
-THREE_LINE_FMTS = {"믹스 텍스트강조", "믹스 할인율뱃지"}
-# logo category: brand logo in obj_box (no product images)
-LOGO_FMTS = {"로고 가운데+텍스트", "로고 가운데+뱃지", "로고 우측+텍스트", "로고 우측+뱃지"}
+# 두 텍스트 존 포맷 (좌=메인카피(좌) 텍스트 또는 없음, 우=메인카피(우)+서브카피)
+CENTER_FMTS = {
+    "가운데 오브젝트",
+    "믹스 텍스트강조", "믹스 할인율뱃지",
+    "로고 가운데+텍스트", "로고 가운데+뱃지",
+}
+# 로고 카테고리 (브랜드 로고 이미지 별도 존에 배치)
+LOGO_FMTS = {
+    "로고 가운데+텍스트", "로고 가운데+뱃지",
+    "로고 우측+텍스트",   "로고 우측+뱃지",
+}
+# 로고 우측 전용 (브랜드로고 상단좌 + 상품 우측 + 카피 하단좌)
+LOGO_RIGHT_FMTS = {"로고 우측+텍스트", "로고 우측+뱃지"}
 
 ZONES = {
-    # (obj_box, left_text_x, left_max_w, right_text_x_or_None, right_max_w)
-    "가운데 오브젝트":    ((340, PAD, 690, CANVAS_H - PAD), 55, 265, 710, 210),
-    "텍스트강조":         (None,                            55, 860, None, 0),
-    "할인율뱃지":         (None,                            55, 860, None, 0),
-    "서브텍스트강조":     (None,                            55, 860, None, 0),
-    "믹스 텍스트강조":    ((PAD, PAD, 370, CANVAS_H - PAD), 410, 560, None, 0),
-    "믹스 할인율뱃지":    ((PAD, PAD, 370, CANVAS_H - PAD), 410, 560, None, 0),
-    "로고 가운데+텍스트": ((310, 25, 700, CANVAS_H - 25),   55, 235, 720, 200),
-    "로고 가운데+뱃지":   ((310, 25, 700, CANVAS_H - 25),   55, 235, 720, 200),
-    "로고 우측+텍스트":   ((620, PAD, 980, CANVAS_H - PAD), 55, 530, None, 0),
-    "로고 우측+뱃지":     ((620, PAD, 980, CANVAS_H - PAD), 55, 530, None, 0),
+    # (obj_box, left_text_x|None, left_max_w, right_text_x|None, right_max_w)
+    "가운데 오브젝트":    ((180, 5,  535, 253), 20,   150, 555, 445),
+    "텍스트강조":         (None,               55,   860, None, 0),
+    "할인율뱃지":         (None,               55,   860, None, 0),
+    "서브텍스트강조":     (None,               55,   860, None, 0),
+    "믹스 텍스트강조":    ((180, 5,  535, 253), 20,   150, 555, 445),
+    "믹스 할인율뱃지":    ((180, 5,  535, 253), 20,   150, 555, 445),
+    "로고 가운데+텍스트": ((180, 5,  535, 253), None, 0,   555, 445),
+    "로고 가운데+뱃지":   ((180, 5,  535, 253), None, 0,   555, 445),
+    "로고 우측+텍스트":   ((440, 5,  730, 253), 20,   400, None, 0),
+    "로고 우측+뱃지":     ((440, 5,  730, 253), 20,   400, None, 0),
 }
+
+# 브랜드 로고 이미지 배치 존 (LOGO_FMTS 전용)
+BRAND_LOGO_ZONES: dict[str, tuple[int, int, int, int]] = {
+    "로고 가운데+텍스트": (5, 15, 175, 243),   # 좌측 세로 전체
+    "로고 가운데+뱃지":   (5, 15, 175, 243),
+    "로고 우측+텍스트":   (5, 15, 430, 135),   # 상단 좌측 대형
+    "로고 우측+뱃지":     (5, 15, 430, 135),
+}
+
 
 def _fmt_key(fmt: str) -> str:
     return (fmt
         .replace("[믹스] ", "믹스 ")
-        .replace("[로고] ", "로고 ")
-        .replace("+", "+"))
+        .replace("[로고] ", "로고 "))
 
 
 # ── main entry ────────────────────────────────────────────────────────────────
 
 def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
-    """
-    creative keys:
-      format, main_copy, sub_copy, emphasis_text, emphasis_color,
-      emphasis_type ("text"|"badge"|"none"),
-      product_images: list[bytes], emoji_images: list[bytes]
-    """
     canvas = Image.new("RGBA", (CANVAS_W, CANVAS_H), (0, 0, 0, 0))
     draw   = ImageDraw.Draw(canvas)
 
-    fmt          = creative.get("format", "텍스트강조")
-    main_copy    = creative.get("main_copy", "")
-    sub_copy     = creative.get("sub_copy", "")
-    emphasis_text = creative.get("emphasis_text", "")
+    fmt            = creative.get("format", "텍스트강조")
+    main_copy      = creative.get("main_copy", "")
+    sub_copy       = creative.get("sub_copy", "")
+    sub_right      = creative.get("sub_right", "")
+    emphasis_text  = creative.get("emphasis_text", "")
     emphasis_color = creative.get("emphasis_color", "#CC0000")
     emphasis_type  = creative.get("emphasis_type", "none")
     product_images = creative.get("product_images", [])
     emoji_images   = creative.get("emoji_images", [])
+    brand_logo     = creative.get("brand_logo", None)
 
     key = _fmt_key(fmt)
     obj_box, text_x, _lw, right_x, _rw = ZONES.get(key, ZONES["텍스트강조"])
-    sub_right      = creative.get("sub_right", "")
-    brand_logo     = creative.get("brand_logo", None)
 
-    # 1. Object / brand logo
-    if obj_box:
-        if key in LOGO_FMTS:
-            if brand_logo:
-                _paste(canvas, brand_logo, obj_box)
-        elif product_images:
+    # 1. 이미지 오브젝트 배치
+    if key in LOGO_RIGHT_FMTS:
+        # 브랜드 로고 → 상단 좌측 존
+        blz = BRAND_LOGO_ZONES.get(key)
+        if blz and brand_logo:
+            _paste(canvas, brand_logo, blz)
+        # 상품 → 우측 존
+        if obj_box and product_images:
             _paste(canvas, product_images[0], obj_box)
-            # additional product images (카테고리/믹스 배치)
-            if len(product_images) > 1:
-                bw   = obj_box[2] - obj_box[0]
-                sub_w = bw // len(product_images)
-                for i, img_b in enumerate(product_images[1:3], 1):
-                    sub_box = (
-                        obj_box[0] + sub_w * i, obj_box[1],
-                        obj_box[0] + sub_w * (i + 1), obj_box[3],
-                    )
-                    _paste(canvas, img_b, sub_box)
 
-    # 2. Emoji (상품 색상에 맞게 색조 조화 후 붙이기)
+    elif key in LOGO_FMTS:
+        # 브랜드 로고 → 좌측 존
+        blz = BRAND_LOGO_ZONES.get(key)
+        if blz and brand_logo:
+            _paste(canvas, brand_logo, blz)
+        # 상품 → 가운데 존
+        if obj_box and product_images:
+            _paste(canvas, product_images[0], obj_box)
+
+    elif obj_box and product_images:
+        # 일반 포맷 — 단독/카테고리/믹스(코디) 배치
+        n = min(len(product_images), 3)
+        if n == 1:
+            _paste(canvas, product_images[0], obj_box)
+        else:
+            bw    = obj_box[2] - obj_box[0]
+            sub_w = bw // n
+            for i in range(n):
+                sub_box = (
+                    obj_box[0] + sub_w * i, obj_box[1],
+                    obj_box[0] + sub_w * (i + 1), obj_box[3],
+                )
+                _paste(canvas, product_images[i], sub_box)
+
+    # 2. 이모티콘 (상품 색상에 맞게 색조 조화 후 배치)
     if emoji_images and obj_box:
-        # 상품(또는 브랜드로고) 이미지에서 주요 색상 추출
-        _palette_src = (brand_logo or (product_images[0] if product_images else None))
+        _palette_src = product_images[0] if product_images else (brand_logo or None)
         _palette = _dominant_color(_palette_src) if _palette_src else None
-
         em_size = 56
         em_x = obj_box[2] - em_size - 5
         em_y = obj_box[1] + 5
@@ -336,26 +346,31 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
             except Exception:
                 pass
 
-    # 3. Text blocks
-    if key in CENTER_FMTS:
-        # 두 존: 좌=메인카피(좌), 우=메인카피(우)+서브카피
-        if main_copy:
-            _draw_text_block(draw, text_x, CANVAS_H // 2, main_copy, "")
+    # 3. 텍스트 블록
+    if key in LOGO_RIGHT_FMTS:
+        # 브랜드 로고는 상단 좌측, 카피는 하단 좌측
+        text_y = CANVAS_H * 3 // 4   # ≈ 194px
+        if main_copy or sub_copy:
+            _draw_text_block(
+                draw, text_x, text_y,
+                main_copy, sub_copy,
+                emphasis_text, emphasis_color, emphasis_type,
+            )
+
+    elif key in CENTER_FMTS:
+        # 좌측 존: 메인카피(좌) 텍스트 — 로고 가운데는 None이므로 스킵
+        if text_x is not None and main_copy:
+            _draw_left_zone(draw, text_x, CANVAS_H // 2, main_copy, _lw)
+        # 우측 존: 메인카피(우) + 서브카피
         if right_x and (sub_copy or sub_right):
             _draw_text_block(
                 draw, right_x, CANVAS_H // 2,
                 sub_copy, sub_right,
                 emphasis_text, emphasis_color, emphasis_type,
             )
-    elif key in THREE_LINE_FMTS:
-        # 단일 존, 3줄: 메인카피(좌)→메인카피(우)→서브카피
-        _draw_three_line_block(
-            draw, text_x, CANVAS_H // 2,
-            main_copy, sub_copy, sub_right,
-            emphasis_text, emphasis_color, emphasis_type,
-        )
+
     else:
-        # 단일 존, 2줄: 메인카피+서브카피 (좌측 정렬)
+        # 단일 존 (텍스트강조 / 할인율뱃지 / 서브텍스트강조)
         if main_copy or sub_copy:
             _draw_text_block(
                 draw, text_x, CANVAS_H // 2,
@@ -363,7 +378,7 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
                 emphasis_text, emphasis_color, emphasis_type,
             )
 
-    # 5. ABLY logo (always, top-right)
+    # 4. ABLY 로고 — 항상 우측 상단
     if logo_bytes:
         _paste_logo(canvas, logo_bytes)
 
