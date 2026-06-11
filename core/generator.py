@@ -78,33 +78,50 @@ def _dominant_color(img_bytes: bytes) -> tuple[int, int, int] | None:
 
 def _harmonize_emoji(
     emoji_img: Image.Image,
-    target_rgb: tuple[int, int, int],
+    target_rgb: tuple[int, int, int] | None = None,
     strength: float = 0.28,
+    hue_shift: float = 0.0,
 ) -> Image.Image:
-    """이모티콘 색조를 target_rgb 방향으로 strength 비율만큼 이동."""
-    tr, tg, tb = (x / 255.0 for x in target_rgb)
-    th, _ts, _tv = colorsys.rgb_to_hsv(tr, tg, tb)
-
+    """이모티콘 색조를 target_rgb 방향으로 strength 비율만큼 이동.
+    hue_shift != 0.0 이면 target_rgb 무시하고 H 채널을 hue_shift/360.0 만큼 이동."""
     emoji = emoji_img.convert("RGBA")
     pixels = list(emoji.getdata())
     new_pixels: list = []
 
-    for r, g, b, a in pixels:
-        if a < 15:
-            new_pixels.append((r, g, b, a))
-            continue
-        h, s, v = colorsys.rgb_to_hsv(r / 255.0, g / 255.0, b / 255.0)
-        if s < 0.12 or v < 0.15:
-            new_pixels.append((r, g, b, a))
-            continue
-        diff = th - h
-        if diff > 0.5:
-            diff -= 1.0
-        elif diff < -0.5:
-            diff += 1.0
-        new_h = (h + diff * strength) % 1.0
-        nr, ng, nb = colorsys.hsv_to_rgb(new_h, s, v)
-        new_pixels.append((int(nr * 255), int(ng * 255), int(nb * 255), a))
+    if hue_shift != 0.0:
+        shift = hue_shift / 360.0
+        for r, g, b, a in pixels:
+            if a < 15:
+                new_pixels.append((r, g, b, a))
+                continue
+            h, s, v = colorsys.rgb_to_hsv(r / 255.0, g / 255.0, b / 255.0)
+            if s < 0.12 or v < 0.15:
+                new_pixels.append((r, g, b, a))
+                continue
+            new_h = (h + shift) % 1.0
+            nr, ng, nb = colorsys.hsv_to_rgb(new_h, s, v)
+            new_pixels.append((int(nr * 255), int(ng * 255), int(nb * 255), a))
+    else:
+        if target_rgb is None:
+            return emoji_img
+        tr, tg, tb = (x / 255.0 for x in target_rgb)
+        th, _ts, _tv = colorsys.rgb_to_hsv(tr, tg, tb)
+        for r, g, b, a in pixels:
+            if a < 15:
+                new_pixels.append((r, g, b, a))
+                continue
+            h, s, v = colorsys.rgb_to_hsv(r / 255.0, g / 255.0, b / 255.0)
+            if s < 0.12 or v < 0.15:
+                new_pixels.append((r, g, b, a))
+                continue
+            diff = th - h
+            if diff > 0.5:
+                diff -= 1.0
+            elif diff < -0.5:
+                diff += 1.0
+            new_h = (h + diff * strength) % 1.0
+            nr, ng, nb = colorsys.hsv_to_rgb(new_h, s, v)
+            new_pixels.append((int(nr * 255), int(ng * 255), int(nb * 255), a))
 
     result = Image.new("RGBA", emoji.size)
     result.putdata(new_pixels)
@@ -165,15 +182,20 @@ def _draw_text_block(
     emphasis_text: str = "",
     emphasis_color: str = "#CC0000",
     emphasis_type: str = "none",
+    main_pt: int | None = None,
+    sub_pt: int | None = None,
 ) -> None:
-    f_main     = _font(True,  MAIN_PT)
-    f_sub      = _font(False, SUB_PT)
-    f_sub_bold = _font(True,  SUB_PT)
+    _main_pt = main_pt if main_pt is not None else MAIN_PT
+    _sub_pt  = sub_pt  if sub_pt  is not None else SUB_PT
+
+    f_main     = _font(True,  _main_pt)
+    f_sub      = _font(False, _sub_pt)
+    f_sub_bold = _font(True,  _sub_pt)
     em_rgb     = _hex(emphasis_color)
 
     has_sub = bool(sub_copy) or (emphasis_type != "none" and emphasis_text)
-    _sub_h  = BADGE_H if (emphasis_type == "badge" and emphasis_text) else SUB_PT
-    total_h = MAIN_PT + (GAP + _sub_h if has_sub else 0)
+    _sub_h  = BADGE_H if (emphasis_type == "badge" and emphasis_text) else _sub_pt
+    total_h = _main_pt + (GAP + _sub_h if has_sub else 0)
     y = y_center - total_h // 2
 
     if main_copy:
@@ -182,7 +204,7 @@ def _draw_text_block(
     if not has_sub:
         return
 
-    sub_y = y + MAIN_PT + GAP
+    sub_y = y + _main_pt + GAP
 
     if emphasis_type == "badge" and emphasis_text:
         badge_w = _draw_badge(draw, x, sub_y, emphasis_text, em_rgb)
@@ -299,8 +321,23 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
     emoji_images   = creative.get("emoji_images", [])
     brand_logo     = creative.get("brand_logo", None)
 
+    adj        = creative.get("adjustments", {})
+    _text_dx   = int(adj.get("text_dx",  0))
+    _text_dy   = int(adj.get("text_dy",  0))
+    _main_size = int(adj.get("main_size", MAIN_PT))
+    _sub_size  = int(adj.get("sub_size",  SUB_PT))
+    _obj_dx    = int(adj.get("obj_dx",   0))
+    _obj_dy    = int(adj.get("obj_dy",   0))
+    _em_size   = int(adj.get("em_size",  52))
+    _em_hue    = float(adj.get("em_hue", 0.0))
+
     key = _fmt_key(fmt)
     obj_box, text_x, _lw, right_x, _rw = ZONES.get(key, ZONES["텍스트강조"])
+
+    # obj_box offset 적용
+    if obj_box and (_obj_dx or _obj_dy):
+        obj_box = (obj_box[0]+_obj_dx, obj_box[1]+_obj_dy,
+                   obj_box[2]+_obj_dx, obj_box[3]+_obj_dy)
 
     # 1. 이미지 오브젝트 배치
     if key in LOGO_RIGHT_FMTS:
@@ -341,7 +378,7 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
     if emoji_images and obj_box:
         _palette_src = product_images[0] if product_images else (brand_logo or None)
         _palette = _dominant_color(_palette_src) if _palette_src else None
-        em_size = 52
+        em_size = _em_size
         x0, y0, x1, y1 = obj_box
 
         # 위치 1: 상단 우측 — ABLY 영역(x>830, y<55)이면 상단 좌측으로
@@ -364,7 +401,9 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
                 em = Image.open(io.BytesIO(eb)).convert("RGBA").resize(
                     (em_size, em_size), Image.LANCZOS
                 )
-                if _palette:
+                if _em_hue != 0.0:
+                    em = _harmonize_emoji(em, hue_shift=_em_hue)
+                elif _palette:
                     em = _harmonize_emoji(em, _palette)
                 canvas.paste(em, pos, em.split()[3])
             except Exception:
@@ -376,9 +415,10 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
         text_y = CANVAS_H * 3 // 4   # ≈ 194px
         if main_copy or sub_copy:
             _draw_text_block(
-                draw, text_x, text_y,
+                draw, text_x + _text_dx, text_y + _text_dy,
                 main_copy, sub_copy,
                 emphasis_text, emphasis_color, emphasis_type,
+                main_pt=_main_size, sub_pt=_sub_size,
             )
 
     elif key in CENTER_FMTS:
@@ -388,18 +428,20 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
         # 우측 존: 메인카피(우) + 서브카피
         if right_x and (sub_copy or sub_right):
             _draw_text_block(
-                draw, right_x, CANVAS_H // 2,
+                draw, right_x + _text_dx, CANVAS_H // 2 + _text_dy,
                 sub_copy, sub_right,
                 emphasis_text, emphasis_color, emphasis_type,
+                main_pt=_main_size, sub_pt=_sub_size,
             )
 
     else:
         # 단일 존 (텍스트강조 / 할인율뱃지 / 서브텍스트강조)
         if main_copy or sub_copy:
             _draw_text_block(
-                draw, text_x, CANVAS_H // 2,
+                draw, text_x + _text_dx, CANVAS_H // 2 + _text_dy,
                 main_copy, sub_copy,
                 emphasis_text, emphasis_color, emphasis_type,
+                main_pt=_main_size, sub_pt=_sub_size,
             )
 
     # 4. ABLY 로고 — 항상 우측 상단
