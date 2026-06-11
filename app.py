@@ -154,9 +154,13 @@ if "creatives"  not in st.session_state: st.session_state.creatives  = [_new()]
 
 # ── 헤더 ────────────────────────────────────────────────────────────────────────
 st.markdown("""
-<div class="topbar">
-  <span class="ably-badge">ABLY</span>
-  <span class="topbar-title">비즈보드 소재 제작기</span>
+<div style="background:white;border-radius:12px;padding:12px 18px;
+            display:flex;align-items:center;gap:10px;
+            margin-bottom:16px;border:1.5px solid #E8E8E8;
+            box-shadow:0 1px 4px rgba(0,0,0,.05);">
+  <span style="background:#FFDE00;padding:3px 10px;border-radius:5px;
+               font-size:13px;font-weight:800;color:#1a1a1a;">ABLY</span>
+  <span style="font-size:16px;font-weight:800;color:#1a1a1a;">비즈보드 소재 제작기</span>
 </div>
 """, unsafe_allow_html=True)
 
