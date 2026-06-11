@@ -153,14 +153,14 @@ if "creatives"  not in st.session_state: st.session_state.creatives  = [_new()]
 
 
 # ── 헤더 ────────────────────────────────────────────────────────────────────────
-st.markdown(
-    '<p style="background:white;border-radius:12px;padding:12px 18px;'
-    'margin-bottom:4px;border:1.5px solid #E8E8E8;">'
+st.html(
+    '<div style="background:white;border-radius:12px;padding:12px 18px;'
+    'margin-bottom:8px;border:1.5px solid #E8E8E8;'
+    'box-shadow:0 1px 4px rgba(0,0,0,.05);">'
     '<span style="background:#FFDE00;padding:3px 10px;border-radius:5px;'
     'font-size:13px;font-weight:800;color:#1a1a1a;margin-right:10px;">ABLY</span>'
     '<span style="font-size:16px;font-weight:800;color:#1a1a1a;">비즈보드 소재 제작기</span>'
-    '</p>',
-    unsafe_allow_html=True,
+    '</div>'
 )
 
 # 피그마 페이지명
