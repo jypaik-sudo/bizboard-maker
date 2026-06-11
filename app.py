@@ -21,27 +21,42 @@ st.markdown("""
 #MainMenu { display: none !important; }
 footer { display: none !important; }
 
-/* 전체 배경 + 상단 여백 제거 */
-[data-testid="stAppViewContainer"] { background: #F2F2F2; }
+/* 전체 배경 그라데이션 + 상단 여백 제거 */
+[data-testid="stAppViewContainer"] {
+    background: linear-gradient(160deg, #ECECEC 0%, #EAE6F4 55%, #E4DDEF 100%) !important;
+    min-height: 100vh;
+}
 [data-testid="stMainBlockContainer"] { max-width: 820px; padding: 16px 16px 40px; }
 [data-testid="stMain"] { padding-top: 0 !important; }
 
 /* 헤더 */
 .topbar {
-    background: white; border-radius: 12px; padding: 12px 18px;
-    display: flex; align-items: center; gap: 10px;
-    margin-bottom: 16px; border: 1.5px solid #E8E8E8;
-    box-shadow: 0 1px 4px rgba(0,0,0,.05);
+    background: rgba(255,255,255,0.72);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 14px; padding: 14px 20px;
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(255,255,255,0.85);
+    box-shadow: 0 2px 12px rgba(58,29,150,.07), 0 1px 3px rgba(0,0,0,.04);
 }
-.topbar-title { font-size: 15px; font-weight: 800; color: #1a1a1a; }
+.topbar-title { font-size: 16px; font-weight: 800; color: #1a1a1a; letter-spacing: -.3px; }
 .ably-badge {
-    background: #FFDE00; padding: 2px 9px; border-radius: 5px;
-    font-size: 13px; font-weight: 800; color: #1a1a1a;
+    background: #FFDE00;
+    padding: 3px 10px; border-radius: 6px;
+    font-size: 12px; font-weight: 900; color: #1a1a1a;
+    letter-spacing: .5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.12);
 }
 
 /* 카드 */
 .s-card {
-    background: white; border-radius: 12px; border: 1.5px solid #E8E8E8;
+    background: rgba(255,255,255,0.78);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.9);
+    box-shadow: 0 1px 6px rgba(58,29,150,.06);
     padding: 16px 18px; margin-bottom: 12px;
 }
 .s-card-title {
