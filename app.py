@@ -207,14 +207,16 @@ def _set_fmt(cid, fmt):
         if cr["id"] == cid: cr["format"] = fmt; break
 
 def _fmt_selector(cid, current):
+    # 모든 행을 동일한 5열(라벨 1 + 버튼 4)로 고정 → 그룹 간 버튼 위치 완벽 정렬
     for group, fmts in FORMATS.items():
-        st.markdown(
-            f"<span style='font-size:10px;font-weight:800;color:#AAA;"
-            f"text-transform:uppercase;letter-spacing:.06em'>{group}</span>",
+        lc, c0, c1, c2, c3 = st.columns([1.2, 2.5, 2.5, 2.5, 2.5])
+        lc.markdown(
+            f"<div style='font-size:10px;font-weight:800;color:#AAA;"
+            f"text-transform:uppercase;letter-spacing:.06em;"
+            f"padding-top:8px;text-align:right;padding-right:4px'>{group}</div>",
             unsafe_allow_html=True)
-        cols = st.columns(4)
         for i, fmt in enumerate(fmts):
-            cols[i].button(
+            [c0, c1, c2, c3][i].button(
                 FMT_LABELS.get(fmt, fmt),
                 key=f"fmt_{cid}_{fmt}",
                 type="primary" if fmt == current else "secondary",
