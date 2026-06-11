@@ -207,7 +207,7 @@ def _render_creative(idx: int, c: dict) -> None:
                     f"<div style='background:#FFFBF0;border:1.5px dashed #FFD080;"
                     f"border-radius:8px;padding:12px 14px;margin-top:8px'>"
                     f"<span style='font-size:12px;color:#B45309;font-weight:600'>"
-                    f"↳ {EMPHASIS_Q[em_type]}</span></div>",
+                    f"{EMPHASIS_Q[em_type]}</span></div>",
                     unsafe_allow_html=True,
                 )
 
