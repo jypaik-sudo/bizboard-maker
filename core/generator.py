@@ -127,12 +127,68 @@ def _draw_text_block(
             draw.text((x, sub_y), sub_copy, font=f_sub, fill=SUB_COLOR)
 
 
+# ── three-line single-zone block (믹스) ──────────────────────────────────────
+
+def _draw_three_line_block(
+    draw: ImageDraw.ImageDraw,
+    x: int, y_center: int,
+    line1: str, line2: str, line3: str,
+    emphasis_text: str = "",
+    emphasis_color: str = "#CC0000",
+    emphasis_type: str = "none",
+) -> None:
+    """line1, line2: Bold MAIN_COLOR MAIN_PT; line3: Regular/emphasis SUB_PT."""
+    f1     = _font(True,  MAIN_PT)
+    f2     = _font(True,  MAIN_PT)
+    f3     = _font(False, SUB_PT)
+    f3b    = _font(True,  SUB_PT)
+    em_rgb = _hex(emphasis_color)
+
+    has2 = bool(line2)
+    has3 = bool(line3) or (emphasis_type != "none" and emphasis_text)
+    total_h = MAIN_PT
+    if has2: total_h += GAP + MAIN_PT
+    if has3: total_h += GAP + SUB_PT
+    y = y_center - total_h // 2
+
+    if line1:
+        draw.text((x, y), line1, font=f1, fill=MAIN_COLOR)
+    y2 = y + MAIN_PT + GAP
+    if has2:
+        draw.text((x, y2), line2, font=f2, fill=MAIN_COLOR)
+    y3 = y2 + (MAIN_PT if has2 else 0) + GAP
+
+    if has3:
+        if emphasis_type == "badge" and emphasis_text:
+            bw = _draw_badge(draw, x, y3, emphasis_text, em_rgb)
+            if line3:
+                draw.text((x + bw + 12, y3), line3, font=f3, fill=SUB_COLOR)
+        elif emphasis_type == "text" and emphasis_text and line3 and emphasis_text in line3:
+            idx = line3.index(emphasis_text)
+            before, after = line3[:idx], line3[idx + len(emphasis_text):]
+            cx = x
+            if before:
+                draw.text((cx, y3), before, font=f3, fill=SUB_COLOR)
+                cx += _text_w(draw, before, f3)
+            draw.text((cx, y3), emphasis_text, font=f3b, fill=em_rgb)
+            cx += _text_w(draw, emphasis_text, f3b)
+            if after:
+                draw.text((cx, y3), after, font=f3, fill=SUB_COLOR)
+        else:
+            if line3:
+                draw.text((x, y3), line3, font=f3, fill=SUB_COLOR)
+
+
 # ── layout zones per format ───────────────────────────────────────────────────
 
 PAD = 20   # general inner padding
 
-# center-object formats: draw main_copy LEFT, sub_copy+sub_right RIGHT
+# two text zones (object center): left=main_copy, right=sub_copy+sub_right
 CENTER_FMTS = {"가운데 오브젝트", "로고 가운데+텍스트", "로고 가운데+뱃지"}
+# three-line single zone (object left, 3 text lines right)
+THREE_LINE_FMTS = {"믹스 텍스트강조", "믹스 할인율뱃지"}
+# logo category: brand logo in obj_box (no product images)
+LOGO_FMTS = {"로고 가운데+텍스트", "로고 가운데+뱃지", "로고 우측+텍스트", "로고 우측+뱃지"}
 
 ZONES = {
     # (obj_box, left_text_x, left_max_w, right_text_x_or_None, right_max_w)
@@ -178,24 +234,28 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
 
     key = _fmt_key(fmt)
     obj_box, text_x, _lw, right_x, _rw = ZONES.get(key, ZONES["텍스트강조"])
-    sub_right = creative.get("sub_right", "")
+    sub_right      = creative.get("sub_right", "")
+    brand_logo     = creative.get("brand_logo", None)
 
-    # 1. Product / logo object
-    if obj_box and product_images:
-        _paste(canvas, product_images[0], obj_box)
+    # 1. Object / brand logo
+    if obj_box:
+        if key in LOGO_FMTS:
+            if brand_logo:
+                _paste(canvas, brand_logo, obj_box)
+        elif product_images:
+            _paste(canvas, product_images[0], obj_box)
+            # additional product images (카테고리/믹스 배치)
+            if len(product_images) > 1:
+                bw   = obj_box[2] - obj_box[0]
+                sub_w = bw // len(product_images)
+                for i, img_b in enumerate(product_images[1:3], 1):
+                    sub_box = (
+                        obj_box[0] + sub_w * i, obj_box[1],
+                        obj_box[0] + sub_w * (i + 1), obj_box[3],
+                    )
+                    _paste(canvas, img_b, sub_box)
 
-    # 2. Additional product images for 카테고리/믹스 배치
-    if obj_box and len(product_images) > 1:
-        bw = obj_box[2] - obj_box[0]
-        sub_w = bw // len(product_images)
-        for i, img_b in enumerate(product_images[1:3], 1):
-            sub_box = (
-                obj_box[0] + sub_w * i, obj_box[1],
-                obj_box[0] + sub_w * (i + 1), obj_box[3],
-            )
-            _paste(canvas, img_b, sub_box)
-
-    # 3. Emoji (top-right of object zone or near text)
+    # 2. Emoji
     if emoji_images and obj_box:
         em_size = 56
         em_x = obj_box[2] - em_size - 5
@@ -210,19 +270,26 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
             except Exception:
                 pass
 
-    # 4. Text block
+    # 3. Text blocks
     if key in CENTER_FMTS:
-        # LEFT: 메인카피(좌) only
+        # 두 존: 좌=메인카피(좌), 우=메인카피(우)+서브카피
         if main_copy:
             _draw_text_block(draw, text_x, CANVAS_H // 2, main_copy, "")
-        # RIGHT: 메인카피(우) + 서브카피, with emphasis
         if right_x and (sub_copy or sub_right):
             _draw_text_block(
                 draw, right_x, CANVAS_H // 2,
                 sub_copy, sub_right,
                 emphasis_text, emphasis_color, emphasis_type,
             )
+    elif key in THREE_LINE_FMTS:
+        # 단일 존, 3줄: 메인카피(좌)→메인카피(우)→서브카피
+        _draw_three_line_block(
+            draw, text_x, CANVAS_H // 2,
+            main_copy, sub_copy, sub_right,
+            emphasis_text, emphasis_color, emphasis_type,
+        )
     else:
+        # 단일 존, 2줄: 메인카피+서브카피 (좌측 정렬)
         if main_copy or sub_copy:
             _draw_text_block(
                 draw, text_x, CANVAS_H // 2,

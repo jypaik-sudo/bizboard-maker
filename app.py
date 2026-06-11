@@ -165,17 +165,34 @@ EMPHASIS_Q = {
 
 
 # ── 세션 초기화 ────────────────────────────────────────────────────────────────
-CENTER_OBJ_FMTS = {"가운데 오브젝트", "[로고] 가운데+텍스트", "[로고] 가운데+뱃지"}
+# 3개 카피 필드 (메인카피(좌) + 메인카피(우) + 서브카피)
+THREE_FIELD_FMTS = {
+    "가운데 오브젝트",
+    "[믹스] 텍스트강조", "[믹스] 할인율뱃지",
+    "[로고] 가운데+텍스트", "[로고] 가운데+뱃지",
+}
+# 로고 카테고리 (브랜드 로고 업로드 필요)
+LOGO_FMTS = {
+    "[로고] 가운데+텍스트", "[로고] 가운데+뱃지",
+    "[로고] 우측+텍스트",   "[로고] 우측+뱃지",
+}
 
 def _new() -> dict:
     return dict(
         id=str(uuid.uuid4())[:8], name="", format="가운데 오브젝트",
         main_copy="", sub_copy="", sub_right="", emphasis_text="",
         emphasis_color="#CC0000", use_recommend=True,
-        product_images=[], reference_image=None,
+        product_images=[], brand_logo=None, reference_image=None,
         object_type="단독", use_emoji=False, emoji_keywords="",
         result_png=None,
     )
+
+def _set_fmt(cid: str, fmt: str) -> None:
+    """포맷 버튼 on_click 콜백 — 한 번 클릭으로 즉시 반영."""
+    for cr in st.session_state.creatives:
+        if cr["id"] == cid:
+            cr["format"] = fmt
+            break
 
 if "page_name"  not in st.session_state: st.session_state.page_name  = ""
 if "creatives"  not in st.session_state: st.session_state.creatives  = [_new()]
@@ -201,11 +218,9 @@ st.session_state.page_name = st.text_input(
 # ── 포맷 선택 위젯 ──────────────────────────────────────────────────────────────
 _MAX_BTNS = max(len(v) for v in FORMATS.values())  # 4
 
-def _fmt_selector(cid: str, current: str) -> str:
-    selected = current
+def _fmt_selector(cid: str, current: str) -> None:
     for group, fmts in FORMATS.items():
         short_labels = [f.replace("[믹스] ", "").replace("[로고] ", "") for f in fmts]
-        # 모든 행을 동일한 4-button 폭으로 고정 → 믹스 버튼이 자동 좌측 정렬
         all_cols = st.columns([0.7] + [1.8] * _MAX_BTNS)
         g_col = all_cols[0]
         btn_cols = all_cols[1 : len(fmts) + 1]
@@ -215,11 +230,12 @@ def _fmt_selector(cid: str, current: str) -> str:
             unsafe_allow_html=True,
         )
         for col, fmt, lbl in zip(btn_cols, fmts, short_labels):
-            if col.button(lbl, key=f"fmt_{cid}_{fmt}",
-                          type="primary" if fmt == selected else "secondary",
-                          use_container_width=True):
-                selected = fmt
-    return selected
+            col.button(
+                lbl, key=f"fmt_{cid}_{fmt}",
+                type="primary" if fmt == current else "secondary",
+                use_container_width=True,
+                on_click=_set_fmt, args=(cid, fmt),
+            )
 
 
 # ── 소재 카드 ──────────────────────────────────────────────────────────────────
@@ -236,7 +252,7 @@ def _card(idx: int, c: dict):
                                    key=f"name_{cid}")
 
         st.markdown("<div class='s-card-title'>포맷 선택</div>", unsafe_allow_html=True)
-        c["format"] = _fmt_selector(cid, c["format"])
+        _fmt_selector(cid, c["format"])
         fmt     = c["format"]
         em_type = EMPHASIS_TYPE.get(fmt, "none")
 
@@ -244,19 +260,28 @@ def _card(idx: int, c: dict):
 
         # ── 카피 ──
         st.markdown("<div class='s-card-title'>카피</div>", unsafe_allow_html=True)
-        c["main_copy"] = st.text_input(
-            "메인카피(좌) · Bold · #4C4C4C", value=c["main_copy"],
-            placeholder="예: [헬로키티 크록스] 쫀득 말랑",
-            key=f"main_{cid}")
-        c["sub_copy"] = st.text_input(
-            "메인카피(우) · Bold · #4C4C4C", value=c["sub_copy"],
-            placeholder="예: 착화감 최고",
-            key=f"sub_{cid}")
-        if fmt in CENTER_OBJ_FMTS:
+        if fmt in THREE_FIELD_FMTS:
+            c["main_copy"] = st.text_input(
+                "메인카피(좌) · Bold · #4C4C4C", value=c["main_copy"],
+                placeholder="예: 쫀득 말랑 착화감",
+                key=f"main_{cid}")
+            c["sub_copy"] = st.text_input(
+                "메인카피(우) · Bold · #4C4C4C", value=c["sub_copy"],
+                placeholder="예: 착화감 최고",
+                key=f"sub_{cid}")
             c["sub_right"] = st.text_input(
                 "서브카피 · Regular · #777777", value=c.get("sub_right", ""),
                 placeholder="예: 무료배송 + SALE",
                 key=f"subr_{cid}")
+        else:
+            c["main_copy"] = st.text_input(
+                "메인카피 · Bold · #4C4C4C", value=c["main_copy"],
+                placeholder="예: [에잇세컨즈] 지금이 딱 좋아",
+                key=f"main_{cid}")
+            c["sub_copy"] = st.text_input(
+                "서브카피 · Regular · #777777", value=c["sub_copy"],
+                placeholder="예: 무료배송 + SALE",
+                key=f"sub_{cid}")
 
         # 강조 / 뱃지
         if fmt in HAS_EMPHASIS:
@@ -268,8 +293,8 @@ def _card(idx: int, c: dict):
                 "강조 텍스트", value=c["emphasis_text"],
                 placeholder="예: 무료배송 / 75%",
                 key=f"em_{cid}")
-            # 서브카피에 강조 텍스트가 포함되어 있는지 검증
-            _ref_copy = c.get("sub_right", "") if fmt in CENTER_OBJ_FMTS else c["sub_copy"]
+            # 강조 텍스트가 서브카피에 포함되어 있는지 검증
+            _ref_copy = c.get("sub_right", "") if fmt in THREE_FIELD_FMTS else c["sub_copy"]
             if c["emphasis_text"] and _ref_copy and c["emphasis_text"] not in _ref_copy:
                 st.warning("서브카피에서 확인되지 않은 텍스트입니다. 서브카피에 포함된 문구를 입력해 주세요.")
             col_rec, col_clr = st.columns([1, 1])
@@ -283,35 +308,49 @@ def _card(idx: int, c: dict):
 
         # ── 오브젝트 이미지 ──
         st.markdown("<div class='s-card-title'>오브젝트 이미지</div>", unsafe_allow_html=True)
-        col_ref, col_prod = st.columns(2)
 
-        with col_ref:
-            st.caption("레퍼런스 (선택)")
-            ref = st.file_uploader("레퍼런스", type=["png","jpg","jpeg","webp"],
-                                   key=f"ref_{cid}", label_visibility="collapsed")
-            if ref:
-                c["reference_image"] = ref.read()
-                st.image(c["reference_image"], use_container_width=True)
-
-        with col_prod:
-            st.caption("상품 이미지 ✱ (1~3장)")
-            prods = st.file_uploader("상품 이미지", type=["png","jpg","jpeg","webp"],
-                                     accept_multiple_files=True, key=f"prod_{cid}",
-                                     label_visibility="collapsed")
-            if prods:
-                raws = [f.read() for f in prods[:3]]
+        if fmt in LOGO_FMTS:
+            # 로고 카테고리: 브랜드 로고 1장 업로드 (자동 누끼)
+            st.caption("브랜드 로고 ✱ (자동 누끼 처리)")
+            logo_file = st.file_uploader(
+                "브랜드 로고", type=["png","jpg","jpeg","webp"],
+                key=f"blogo_{cid}", label_visibility="collapsed")
+            if logo_file:
+                raw = logo_file.read()
                 if REMOVEBG_KEY:
-                    with st.spinner("배경 제거 중…"):
-                        c["product_images"] = [remove_background(b, REMOVEBG_KEY) for b in raws]
+                    with st.spinner("누끼 처리 중…"):
+                        c["brand_logo"] = remove_background(raw, REMOVEBG_KEY)
                 else:
-                    c["product_images"] = raws
-                for b in c["product_images"]:
-                    st.image(b, use_container_width=True)
-
-        c["object_type"] = st.radio(
-            "배치 타입", ["단독","카테고리","믹스(코디)"], horizontal=True,
-            index=["단독","카테고리","믹스(코디)"].index(c.get("object_type","단독")),
-            key=f"otype_{cid}")
+                    c["brand_logo"] = raw
+            if c.get("brand_logo"):
+                st.image(c["brand_logo"], use_container_width=True)
+        else:
+            col_ref, col_prod = st.columns(2)
+            with col_ref:
+                st.caption("레퍼런스 (선택)")
+                ref = st.file_uploader("레퍼런스", type=["png","jpg","jpeg","webp"],
+                                       key=f"ref_{cid}", label_visibility="collapsed")
+                if ref:
+                    c["reference_image"] = ref.read()
+                    st.image(c["reference_image"], use_container_width=True)
+            with col_prod:
+                st.caption("상품 이미지 ✱ (1~3장)")
+                prods = st.file_uploader("상품 이미지", type=["png","jpg","jpeg","webp"],
+                                         accept_multiple_files=True, key=f"prod_{cid}",
+                                         label_visibility="collapsed")
+                if prods:
+                    raws = [f.read() for f in prods[:3]]
+                    if REMOVEBG_KEY:
+                        with st.spinner("배경 제거 중…"):
+                            c["product_images"] = [remove_background(b, REMOVEBG_KEY) for b in raws]
+                    else:
+                        c["product_images"] = raws
+                    for b in c["product_images"]:
+                        st.image(b, use_container_width=True)
+            c["object_type"] = st.radio(
+                "배치 타입", ["단독","카테고리","믹스(코디)"], horizontal=True,
+                index=["단독","카테고리","믹스(코디)"].index(c.get("object_type","단독")),
+                key=f"otype_{cid}")
 
         st.markdown("<hr class='s-divider'>", unsafe_allow_html=True)
 
@@ -380,7 +419,9 @@ if st.button("▶ 전체 소재 생성", type="primary", use_container_width=Tru
                     "emphasis_text": c["emphasis_text"],
                     "emphasis_color": c["emphasis_color"],
                     "emphasis_type": EMPHASIS_TYPE.get(c["format"], "none"),
-                    "product_images": c["product_images"], "emoji_images": emoji_images,
+                    "product_images": c["product_images"],
+                    "brand_logo": c.get("brand_logo"),
+                    "emoji_images": emoji_images,
                 }, logo)
             except Exception as e:
                 st.error(f"{c['name'] or c['id']}: {e}")
