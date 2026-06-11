@@ -1,6 +1,7 @@
 """PNG 생성 엔진 — 1029×258 투명 배경"""
 from __future__ import annotations
 import io
+import colorsys
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
@@ -48,6 +49,62 @@ def _paste_logo(canvas: Image.Image, logo_bytes: bytes) -> None:
     x = CANVAS_W - new_w - LOGO_PAD[0]
     y = LOGO_PAD[1]
     canvas.paste(logo, (x, y), logo.split()[3])
+
+
+def _dominant_color(img_bytes: bytes) -> tuple[int, int, int] | None:
+    """상품 이미지에서 주요 색상 추출 (흰/검정 제외)."""
+    try:
+        img = Image.open(io.BytesIO(img_bytes)).convert("RGB").resize((40, 40))
+        quantized = img.quantize(colors=6)
+        pal = quantized.getpalette()[:18]
+        colors = [(pal[i], pal[i+1], pal[i+2]) for i in range(0, 18, 3)]
+        def score(c: tuple) -> float:
+            r, g, b = c
+            brightness = (r + g + b) / 3
+            saturation = max(r, g, b) - min(r, g, b)
+            if brightness < 35 or brightness > 225:
+                return 0
+            return saturation
+        best = max(colors, key=score)
+        return best if score(best) > 20 else None
+    except Exception:
+        return None
+
+
+def _harmonize_emoji(
+    emoji_img: Image.Image,
+    target_rgb: tuple[int, int, int],
+    strength: float = 0.28,
+) -> Image.Image:
+    """이모티콘 색조를 target_rgb 방향으로 strength 비율만큼 이동."""
+    tr, tg, tb = (x / 255.0 for x in target_rgb)
+    th, _ts, _tv = colorsys.rgb_to_hsv(tr, tg, tb)
+
+    emoji = emoji_img.convert("RGBA")
+    pixels = list(emoji.getdata())
+    new_pixels: list = []
+
+    for r, g, b, a in pixels:
+        if a < 15:
+            new_pixels.append((r, g, b, a))
+            continue
+        h, s, v = colorsys.rgb_to_hsv(r / 255.0, g / 255.0, b / 255.0)
+        if s < 0.12 or v < 0.15:  # 무채색·어두운 픽셀은 그대로
+            new_pixels.append((r, g, b, a))
+            continue
+        # hue를 target 방향으로 strength만큼 이동 (최단 경로)
+        diff = th - h
+        if diff > 0.5:
+            diff -= 1.0
+        elif diff < -0.5:
+            diff += 1.0
+        new_h = (h + diff * strength) % 1.0
+        nr, ng, nb = colorsys.hsv_to_rgb(new_h, s, v)
+        new_pixels.append((int(nr * 255), int(ng * 255), int(nb * 255), a))
+
+    result = Image.new("RGBA", emoji.size)
+    result.putdata(new_pixels)
+    return result
 
 
 def _text_w(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.FreeTypeFont) -> int:
@@ -255,8 +312,12 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
                     )
                     _paste(canvas, img_b, sub_box)
 
-    # 2. Emoji
+    # 2. Emoji (상품 색상에 맞게 색조 조화 후 붙이기)
     if emoji_images and obj_box:
+        # 상품(또는 브랜드로고) 이미지에서 주요 색상 추출
+        _palette_src = (brand_logo or (product_images[0] if product_images else None))
+        _palette = _dominant_color(_palette_src) if _palette_src else None
+
         em_size = 56
         em_x = obj_box[2] - em_size - 5
         em_y = obj_box[1] + 5
@@ -265,6 +326,8 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
                 em = Image.open(io.BytesIO(eb)).convert("RGBA").resize(
                     (em_size, em_size), Image.LANCZOS
                 )
+                if _palette:
+                    em = _harmonize_emoji(em, _palette)
                 canvas.paste(em, (em_x, em_y), em.split()[3])
                 em_x -= em_size + 4
             except Exception:
