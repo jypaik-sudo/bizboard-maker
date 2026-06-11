@@ -1,5 +1,5 @@
+from __future__ import annotations
 import re
-import io
 import requests
 from bs4 import BeautifulSoup
 import anthropic
@@ -9,7 +9,7 @@ PILIAPP_BASE = "https://kr.piliapp.com/apple-emoji/search/?q="
 PILIAPP_LIST = "https://kr.piliapp.com/emoji/list/"
 
 
-def fetch_emoji_candidates(keywords: str) -> list[dict]:
+def fetch_emoji_candidates(keywords: str) -> list:
     """piliapp 검색으로 이모티콘 후보 수집. [{name, char, img_url}]"""
     results = []
     for kw in [k.strip() for k in keywords.replace(",", " ").split() if k.strip()]:
@@ -30,7 +30,7 @@ def fetch_emoji_candidates(keywords: str) -> list[dict]:
 
 
 def pick_emoji_with_claude(
-    candidates: list[dict],
+    candidates: list,
     main_copy: str,
     sub_copy: str,
     api_key: str,
@@ -68,7 +68,7 @@ def pick_emoji_with_claude(
         return candidates[:count]
 
 
-def fetch_emoji_png(img_url: str) -> bytes | None:
+def fetch_emoji_png(img_url: str) -> bytes:
     """piliapp에서 Apple 이모티콘 PNG 다운로드."""
     if not img_url:
         return None
