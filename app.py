@@ -17,7 +17,7 @@ from core.emoji import (
 )
 
 # ── 페이지 설정 ──────────────────────────────────────────────────────────────
-st.set_page_config(page_title="비즈보드 제작기", page_icon="📣", layout="wide")
+st.set_page_config(page_title="ABLY 비즈보드 소재 제작기", page_icon="🗂️", layout="wide")
 
 # ── 공통 CSS ─────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -124,7 +124,7 @@ col_logo, col_title = st.columns([1, 8])
 with col_logo:
     st.image("assets/logo.png", width=80)
 with col_title:
-    st.markdown("## 비즈보드 소재 제작기")
+    st.markdown("## ABLY 비즈보드 소재 제작기")
     st.caption("카카오 비즈보드 1029×258px · 투명 PNG · 심사 규정 준수")
 
 st.divider()
