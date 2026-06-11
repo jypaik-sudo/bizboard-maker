@@ -296,8 +296,11 @@ def _card(idx: int, c: dict):
                 key=f"em_{cid}")
             # 강조 텍스트가 서브카피에 포함되어 있는지 검증
             _ref_copy = c.get("sub_right", "") if fmt in THREE_FIELD_FMTS else c["sub_copy"]
-            if c["emphasis_text"] and _ref_copy and c["emphasis_text"] not in _ref_copy:
-                st.warning("서브카피에서 확인되지 않은 텍스트입니다. 서브카피에 포함된 문구를 입력해 주세요.")
+            if c["emphasis_text"]:
+                if not _ref_copy:
+                    st.error("서브카피를 먼저 입력해 주세요.")
+                elif c["emphasis_text"] not in _ref_copy:
+                    st.error(f"'{c['emphasis_text']}'는 서브카피에서 확인되지 않은 텍스트입니다. 서브카피에 포함된 문구를 정확히 입력해 주세요.")
             col_rec, col_clr = st.columns([1, 1])
             c["use_recommend"] = col_rec.checkbox(
                 "색상 AI 추천", value=c.get("use_recommend", True), key=f"rec_{cid}")
