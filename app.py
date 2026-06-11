@@ -164,10 +164,12 @@ EMPHASIS_Q = {
 
 
 # ── 세션 초기화 ────────────────────────────────────────────────────────────────
+CENTER_OBJ_FMTS = {"가운데 오브젝트", "[로고] 가운데+텍스트", "[로고] 가운데+뱃지"}
+
 def _new() -> dict:
     return dict(
         id=str(uuid.uuid4())[:8], name="", format="가운데 오브젝트",
-        main_copy="", sub_copy="", emphasis_text="",
+        main_copy="", sub_copy="", sub_right="", emphasis_text="",
         emphasis_color="#CC0000", use_recommend=True,
         product_images=[], reference_image=None,
         object_type="단독", use_emoji=False, emoji_keywords="",
@@ -245,6 +247,11 @@ def _card(idx: int, c: dict):
             "메인카피(우) · Bold · #4C4C4C", value=c["sub_copy"],
             placeholder="예: 착화감 최고",
             key=f"sub_{cid}")
+        if fmt in CENTER_OBJ_FMTS:
+            c["sub_right"] = st.text_input(
+                "서브카피 · Regular · #777777", value=c.get("sub_right", ""),
+                placeholder="예: 무료배송 + SALE",
+                key=f"subr_{cid}")
 
         # 강조 / 뱃지
         if fmt in HAS_EMPHASIS:
@@ -360,7 +367,8 @@ if st.button("▶ 전체 소재 생성", type="primary", use_container_width=Tru
                     emoji_images = [b for e in chosen if (b := fetch_emoji_png(e.get("img_url","")))]
                 c["result_png"] = generate_png({
                     "format": c["format"], "main_copy": c["main_copy"],
-                    "sub_copy": c["sub_copy"], "emphasis_text": c["emphasis_text"],
+                    "sub_copy": c["sub_copy"], "sub_right": c.get("sub_right", ""),
+                    "emphasis_text": c["emphasis_text"],
                     "emphasis_color": c["emphasis_color"],
                     "emphasis_type": EMPHASIS_TYPE.get(c["format"], "none"),
                     "product_images": c["product_images"], "emoji_images": emoji_images,

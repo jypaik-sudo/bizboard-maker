@@ -89,20 +89,27 @@ def _draw_text_block(
     f_sub_bold = _font(True,  SUB_PT)
     em_rgb     = _hex(emphasis_color)
 
-    total_h = MAIN_PT + GAP + SUB_PT
+    has_sub = bool(sub_copy) or (emphasis_type != "none" and emphasis_text)
+    total_h = MAIN_PT + (GAP + SUB_PT if has_sub else 0)
     y = y_center - total_h // 2
 
     # Main copy
-    draw.text((x, y), main_copy, font=f_main, fill=MAIN_COLOR)
+    if main_copy:
+        draw.text((x, y), main_copy, font=f_main, fill=MAIN_COLOR)
+
+    if not has_sub:
+        return
+
     sub_y = y + MAIN_PT + GAP
 
-    # Sub copy
+    # Sub copy with optional emphasis
     if emphasis_type == "badge" and emphasis_text:
         badge_w = _draw_badge(draw, x, sub_y, emphasis_text, em_rgb)
         cur_x = x + badge_w + 12
-        draw.text((cur_x, sub_y), sub_copy, font=f_sub, fill=SUB_COLOR)
+        if sub_copy:
+            draw.text((cur_x, sub_y), sub_copy, font=f_sub, fill=SUB_COLOR)
 
-    elif emphasis_type == "text" and emphasis_text and emphasis_text in sub_copy:
+    elif emphasis_type == "text" and emphasis_text and sub_copy and emphasis_text in sub_copy:
         idx    = sub_copy.index(emphasis_text)
         before = sub_copy[:idx]
         after  = sub_copy[idx + len(emphasis_text):]
@@ -116,25 +123,29 @@ def _draw_text_block(
             draw.text((cur_x, sub_y), after, font=f_sub, fill=SUB_COLOR)
 
     else:
-        draw.text((x, sub_y), sub_copy, font=f_sub, fill=SUB_COLOR)
+        if sub_copy:
+            draw.text((x, sub_y), sub_copy, font=f_sub, fill=SUB_COLOR)
 
 
 # ── layout zones per format ───────────────────────────────────────────────────
 
 PAD = 20   # general inner padding
 
+# center-object formats: draw main_copy LEFT, sub_copy+sub_right RIGHT
+CENTER_FMTS = {"가운데 오브젝트", "로고 가운데+텍스트", "로고 가운데+뱃지"}
+
 ZONES = {
-    # format_key: (obj_box or None, text_x, text_max_w)
-    "가운데 오브젝트":      ((340, PAD, 690, CANVAS_H - PAD), 55, 270),
-    "텍스트강조":           (None,                             55, 860),
-    "할인율뱃지":           (None,                             55, 860),
-    "서브텍스트강조":       (None,                             55, 860),
-    "믹스 텍스트강조":      ((PAD, PAD, 370, CANVAS_H - PAD), 410, 560),
-    "믹스 할인율뱃지":      ((PAD, PAD, 370, CANVAS_H - PAD), 410, 560),
-    "로고 가운데+텍스트":   ((310, 25, 700, CANVAS_H - 25),   55, 235),
-    "로고 가운데+뱃지":     ((310, 25, 700, CANVAS_H - 25),   55, 235),
-    "로고 우측+텍스트":     ((620, PAD, 980, CANVAS_H - PAD), 55, 530),
-    "로고 우측+뱃지":       ((620, PAD, 980, CANVAS_H - PAD), 55, 530),
+    # (obj_box, left_text_x, left_max_w, right_text_x_or_None, right_max_w)
+    "가운데 오브젝트":    ((340, PAD, 690, CANVAS_H - PAD), 55, 265, 710, 210),
+    "텍스트강조":         (None,                            55, 860, None, 0),
+    "할인율뱃지":         (None,                            55, 860, None, 0),
+    "서브텍스트강조":     (None,                            55, 860, None, 0),
+    "믹스 텍스트강조":    ((PAD, PAD, 370, CANVAS_H - PAD), 410, 560, None, 0),
+    "믹스 할인율뱃지":    ((PAD, PAD, 370, CANVAS_H - PAD), 410, 560, None, 0),
+    "로고 가운데+텍스트": ((310, 25, 700, CANVAS_H - 25),   55, 235, 720, 200),
+    "로고 가운데+뱃지":   ((310, 25, 700, CANVAS_H - 25),   55, 235, 720, 200),
+    "로고 우측+텍스트":   ((620, PAD, 980, CANVAS_H - PAD), 55, 530, None, 0),
+    "로고 우측+뱃지":     ((620, PAD, 980, CANVAS_H - PAD), 55, 530, None, 0),
 }
 
 def _fmt_key(fmt: str) -> str:
@@ -166,7 +177,8 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
     emoji_images   = creative.get("emoji_images", [])
 
     key = _fmt_key(fmt)
-    obj_box, text_x, _ = ZONES.get(key, ZONES["텍스트강조"])
+    obj_box, text_x, _lw, right_x, _rw = ZONES.get(key, ZONES["텍스트강조"])
+    sub_right = creative.get("sub_right", "")
 
     # 1. Product / logo object
     if obj_box and product_images:
@@ -199,12 +211,24 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
                 pass
 
     # 4. Text block
-    if main_copy or sub_copy:
-        _draw_text_block(
-            draw, text_x, CANVAS_H // 2,
-            main_copy, sub_copy,
-            emphasis_text, emphasis_color, emphasis_type,
-        )
+    if key in CENTER_FMTS:
+        # LEFT: 메인카피(좌) only
+        if main_copy:
+            _draw_text_block(draw, text_x, CANVAS_H // 2, main_copy, "")
+        # RIGHT: 메인카피(우) + 서브카피, with emphasis
+        if right_x and (sub_copy or sub_right):
+            _draw_text_block(
+                draw, right_x, CANVAS_H // 2,
+                sub_copy, sub_right,
+                emphasis_text, emphasis_color, emphasis_type,
+            )
+    else:
+        if main_copy or sub_copy:
+            _draw_text_block(
+                draw, text_x, CANVAS_H // 2,
+                main_copy, sub_copy,
+                emphasis_text, emphasis_color, emphasis_type,
+            )
 
     # 5. ABLY logo (always, top-right)
     if logo_bytes:
