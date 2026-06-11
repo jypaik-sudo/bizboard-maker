@@ -15,8 +15,8 @@ MAIN_PT      = 47   # 피그마 실측 47px
 LEFT_MAIN_PT = 32
 SUB_PT       = 39   # 피그마 실측 39px
 BADGE_H      = 50   # 피그마: text-[24px] + py-[13px]*2 = 50px
-GAP          = 14   # 피그마: sub_y(138) - main_y(77) - main_h(47) ≈ 14px
-LOGO_H       = 24   # ABLY 로고 높이 (피그마 실측 21px, 가시성 고려 24px)
+GAP          = 20   # 카카오 비즈보드 가이드: 메인↔서브 간격 20px
+LOGO_H       = 40   # 카카오 비즈보드 가이드: ABLY 로고 높이 35~45px (기본 40px)
 LOGO_PAD     = (50, 24)   # (right_margin, top) — 피그마: x=878, y=24, w≈101
 
 # ABLY 로고 회피 영역: 우측 상단 (이모티콘 배치 시 제외)
@@ -37,11 +37,13 @@ def _hex(h: str) -> tuple[int, int, int]:
     return int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
 
 
-def _paste(canvas: Image.Image, img_bytes: bytes, box: tuple[int, int, int, int]) -> None:
+def _paste(canvas: Image.Image, img_bytes: bytes, box: tuple[int, int, int, int], rotation: float = 0.0) -> None:
     """contain-fit paste with transparency support."""
     img = Image.open(io.BytesIO(img_bytes)).convert("RGBA")
     bw, bh = box[2] - box[0], box[3] - box[1]
     img.thumbnail((bw, bh), Image.LANCZOS)
+    if rotation:
+        img = img.rotate(-rotation, expand=True, resample=Image.BICUBIC)
     x = box[0] + (bw - img.width) // 2
     y = box[1] + (bh - img.height) // 2
     canvas.paste(img, (x, y), img.split()[3])
@@ -328,6 +330,7 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
     _sub_size  = int(adj.get("sub_size",  SUB_PT))
     _obj_dx    = int(adj.get("obj_dx",   0))
     _obj_dy    = int(adj.get("obj_dy",   0))
+    _obj_rot   = float(adj.get("obj_rotation", 0.0))
     _em_size   = int(adj.get("em_size",  52))
     _em_hue    = float(adj.get("em_hue", 0.0))
 
@@ -347,7 +350,7 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
             _paste(canvas, brand_logo, blz)
         # 상품 → 우측 존
         if obj_box and product_images:
-            _paste(canvas, product_images[0], obj_box)
+            _paste(canvas, product_images[0], obj_box, rotation=_obj_rot)
 
     elif key in LOGO_FMTS:
         # 브랜드 로고 → 좌측 존
@@ -356,14 +359,14 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
             _paste(canvas, brand_logo, blz)
         # 상품 → 가운데 존
         if obj_box and product_images:
-            _paste(canvas, product_images[0], obj_box)
+            _paste(canvas, product_images[0], obj_box, rotation=_obj_rot)
 
     elif obj_box:
         # 일반 포맷 (가운데 오브젝트 / 텍스트강조 계열 우측 존 포함)
         if product_images:
             n = min(len(product_images), 3)
             if n == 1:
-                _paste(canvas, product_images[0], obj_box)
+                _paste(canvas, product_images[0], obj_box, rotation=_obj_rot)
             else:
                 bw    = obj_box[2] - obj_box[0]
                 sub_w = bw // n
@@ -372,39 +375,54 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
                         obj_box[0] + sub_w * i, obj_box[1],
                         obj_box[0] + sub_w * (i + 1), obj_box[3],
                     )
-                    _paste(canvas, product_images[i], sub_box)
+                    _paste(canvas, product_images[i], sub_box, rotation=_obj_rot)
 
-    # 2. 이모티콘 — 대각 배치 (상품 주변), ABLY 로고 회피
-    if emoji_images and obj_box:
+    # 2. 이모티콘 — 개별 설정 지원
+    raw_emoji_items = creative.get("emoji_items", [])  # [{"bytes": b, "size": 52, "hue": 0, "rotation": 15}, ...]
+    if not raw_emoji_items and emoji_images:
+        raw_emoji_items = [{"bytes": b, "size": _em_size, "hue": _em_hue, "rotation": 0}
+                           for b in emoji_images]
+
+    if raw_emoji_items and obj_box:
         _palette_src = product_images[0] if product_images else (brand_logo or None)
         _palette = _dominant_color(_palette_src) if _palette_src else None
-        em_size = _em_size
         x0, y0, x1, y1 = obj_box
 
-        # 위치 1: 상단 우측 — ABLY 영역(x>830, y<55)이면 상단 좌측으로
-        p1x = x1 - em_size - 8
-        p1y = y0 + 8
-        if p1x + em_size > _ABLY_SAFE_X and p1y < 55:
-            p1x = x0 + 8   # 상단 좌측으로 이동
+        # 3위치 계산
+        def _em_pos(size, idx, positions_taken):
+            candidates = [
+                (x1 - size - 8,  y0 + 8),            # 우상
+                (x0 + 8,         y1 - size - 8),      # 좌하
+                (x1 - size - 8,  y1 - size - 8),      # 우하
+                (x0 + 8,         y0 + 8),              # 좌상
+            ]
+            for pos in candidates:
+                px, py = pos
+                # ABLY 회피
+                if px + size > _ABLY_SAFE_X and py < 55:
+                    continue
+                # 이미 사용된 위치와 겹치지 않도록
+                if all(abs(px-tx) > size//2 or abs(py-ty) > size//2 for tx,ty in positions_taken):
+                    return pos
+            return candidates[idx % len(candidates)]
 
-        # 위치 2: 하단 반대편 (위치1이 우측이면 하단 좌측, 좌측이면 하단 우측)
-        if p1x == x0 + 8:
-            p2x = x1 - em_size - 8
-        else:
-            p2x = x0 + 8
-        p2y = y1 - em_size - 8
-
-        em_positions = [(p1x, p1y), (p2x, p2y)]
-
-        for pos, eb in zip(em_positions, emoji_images[:2]):
+        positions_taken = []
+        for item in raw_emoji_items[:3]:
+            eb = item.get("bytes") if isinstance(item, dict) else item
+            if not eb:
+                continue
+            i_size = int(item.get("size", _em_size) if isinstance(item, dict) else _em_size)
+            i_hue  = float(item.get("hue",  _em_hue) if isinstance(item, dict) else _em_hue)
+            i_rot  = float(item.get("rotation", 0)   if isinstance(item, dict) else 0)
+            pos = _em_pos(i_size, len(positions_taken), positions_taken)
+            positions_taken.append(pos)
             try:
-                em = Image.open(io.BytesIO(eb)).convert("RGBA").resize(
-                    (em_size, em_size), Image.LANCZOS
-                )
-                if _em_hue != 0.0:
-                    em = _harmonize_emoji(em, hue_shift=_em_hue)
-                elif _palette:
-                    em = _harmonize_emoji(em, _palette)
+                em = Image.open(io.BytesIO(eb)).convert("RGBA").resize((i_size, i_size), Image.LANCZOS)
+                if i_hue != 0.0 or _palette:
+                    em = _harmonize_emoji(em, _palette if i_hue == 0.0 else None,
+                                          hue_shift=i_hue)
+                if i_rot:
+                    em = em.rotate(-i_rot, expand=True, resample=Image.BICUBIC)
                 canvas.paste(em, pos, em.split()[3])
             except Exception:
                 pass
