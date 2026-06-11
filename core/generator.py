@@ -14,7 +14,7 @@ FONT_REGULAR = ASSETS / "Pretendard-Regular.otf"
 MAIN_PT      = 45
 LEFT_MAIN_PT = 32   # 좌측 텍스트 존 (가운데/믹스) 폰트 크기 — 피그마 비율 기준
 SUB_PT       = 36
-BADGE_H      = SUB_PT + 16   # 뱃지 높이 = 52 (상하 8px 여백)
+BADGE_H      = 40            # 뱃지 높이 — 피그마 실측 ~38-40px
 GAP          = 20   # main ↔ sub gap
 LOGO_H       = 24   # ABLY 로고 높이 (피그마 실측 21px, 가시성 고려 24px)
 LOGO_PAD     = (50, 24)   # (right_margin, top) — 피그마: x=878, y=24, w≈101
@@ -141,7 +141,7 @@ def _draw_badge(
     x: int, y: int,
     text: str,
     color: tuple[int, int, int],
-    font_size: int = SUB_PT - 4,
+    font_size: int = 24,   # 피그마 실측 ~22-24px (서브카피 36px보다 작게)
 ) -> int:
     """Draw colored pill badge. Returns total width."""
     font = _font(True, font_size)
@@ -149,7 +149,7 @@ def _draw_badge(
     tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
     px = 14   # 수평 패딩
     bw = tw + px * 2
-    bh = BADGE_H   # SUB_PT+16 — 상하 여백 여유있게
+    bh = BADGE_H   # 40px — 피그마 실측 기준
     draw.rounded_rectangle([x, y, x + bw, y + bh], radius=9, fill=color)
     draw.text(
         (x + px, y + (bh - th) // 2 - bbox[1]),
