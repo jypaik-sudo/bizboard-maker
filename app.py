@@ -93,13 +93,6 @@ EMPHASIS_Q = {
 }
 
 
-# ── Session State 초기화 ──────────────────────────────────────────────────────
-if "page_name" not in st.session_state:
-    st.session_state.page_name = ""
-if "creatives" not in st.session_state:
-    st.session_state.creatives = [_new_creative()]
-
-
 def _new_creative() -> dict:
     return {
         "id":             str(uuid.uuid4())[:8],
@@ -110,13 +103,20 @@ def _new_creative() -> dict:
         "emphasis_text":  "",
         "emphasis_color": "#CC0000",
         "use_recommend":  True,
-        "product_images": [],   # list[bytes]
+        "product_images": [],
         "reference_image": None,
         "object_type":    "단독",
         "use_emoji":      False,
         "emoji_keywords": "",
         "result_png":     None,
     }
+
+
+# ── Session State 초기화 ──────────────────────────────────────────────────────
+if "page_name" not in st.session_state:
+    st.session_state.page_name = ""
+if "creatives" not in st.session_state:
+    st.session_state.creatives = [_new_creative()]
 
 
 # ── 헤더 ─────────────────────────────────────────────────────────────────────
