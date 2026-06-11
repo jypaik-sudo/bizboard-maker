@@ -97,9 +97,10 @@ div[data-testid="column"] button {
     background: white !important;
     color: #555 !important;
     white-space: nowrap !important;
-    min-height: 0 !important;
+    min-height: 32px !important;
     height: auto !important;
     line-height: 1.4 !important;
+    overflow: hidden !important;
 }
 div[data-testid="column"] button:hover {
     border-color: #9B76E8 !important; color: #3A1D96 !important;
@@ -198,12 +199,16 @@ st.session_state.page_name = st.text_input(
 
 
 # ── 포맷 선택 위젯 ──────────────────────────────────────────────────────────────
+_MAX_BTNS = max(len(v) for v in FORMATS.values())  # 4
+
 def _fmt_selector(cid: str, current: str) -> str:
     selected = current
     for group, fmts in FORMATS.items():
         short_labels = [f.replace("[믹스] ", "").replace("[로고] ", "") for f in fmts]
-        # 그룹 레이블 + 버튼을 한 줄에
-        g_col, *btn_cols = st.columns([0.7] + [1.8] * len(fmts))
+        # 모든 행을 동일한 4-button 폭으로 고정 → 믹스 버튼이 자동 좌측 정렬
+        all_cols = st.columns([0.7] + [1.8] * _MAX_BTNS)
+        g_col = all_cols[0]
+        btn_cols = all_cols[1 : len(fmts) + 1]
         g_col.markdown(
             f"<div style='font-size:12px;font-weight:700;color:#888;"
             f"padding-top:6px'>{group}</div>",
@@ -227,7 +232,7 @@ def _card(idx: int, c: dict):
 
         # 소재명 + 포맷 선택
         c["name"] = st.text_input("소재명", value=c["name"],
-                                   placeholder="예: 헬로키티_믹스뱃지",
+                                   placeholder="예: 에잇세컨즈_믹스",
                                    key=f"name_{cid}")
 
         st.markdown("<div class='s-card-title'>포맷 선택</div>", unsafe_allow_html=True)
@@ -263,6 +268,10 @@ def _card(idx: int, c: dict):
                 "강조 텍스트", value=c["emphasis_text"],
                 placeholder="예: 무료배송 / 75%",
                 key=f"em_{cid}")
+            # 서브카피에 강조 텍스트가 포함되어 있는지 검증
+            _ref_copy = c.get("sub_right", "") if fmt in CENTER_OBJ_FMTS else c["sub_copy"]
+            if c["emphasis_text"] and _ref_copy and c["emphasis_text"] not in _ref_copy:
+                st.warning("서브카피에서 확인되지 않은 텍스트입니다. 서브카피에 포함된 문구를 입력해 주세요.")
             col_rec, col_clr = st.columns([1, 1])
             c["use_recommend"] = col_rec.checkbox(
                 "색상 AI 추천", value=c.get("use_recommend", True), key=f"rec_{cid}")
@@ -319,8 +328,8 @@ def _card(idx: int, c: dict):
                     unsafe_allow_html=True)
         st.write("")
 
-        # 삭제 / 복제
-        _, bc1, bc2, __ = st.columns([4, 1, 1, 4])
+        # 삭제 / 복제 (좌측 정렬, 버튼 폭 고정)
+        bc1, bc2, _ = st.columns([1.4, 1.4, 6])
         if bc1.button("🗑 삭제", key=f"del_{cid}"):
             st.session_state.creatives = [x for x in st.session_state.creatives if x["id"] != cid]
             st.rerun()
