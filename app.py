@@ -39,10 +39,10 @@ footer { display: none !important; }
 }
 .ably-badge {
     display: inline-flex; align-items: center; justify-content: center;
-    background: #FF6B9D;
+    background: #FFDE00;
     padding: 0 14px; border-radius: 8px;
     height: 44px;
-    font-size: 16px; font-weight: 900; color: #ffffff;
+    font-size: 16px; font-weight: 900; color: #1a1a1a;
     letter-spacing: .8px;
     box-shadow: 0 1px 4px rgba(0,0,0,.15);
     flex-shrink: 0;
@@ -112,11 +112,11 @@ div[data-testid="column"] button[kind="primary"] {
 
 /* 강조 영역 */
 .em-box {
-    background: #FFF0F5; border: 1.5px dashed #FF6B9D;
-    border-radius: 8px; padding: 14px 14px; margin-top: 6px;
+    background: #FFFBF0; border: 1.5px dashed #FFD080;
+    border-radius: 8px; padding: 14px 14px; margin-top: 6px; margin-bottom: 10px;
     display: flex; align-items: center; min-height: 48px;
 }
-.em-label { font-size: 11px; color: #CC2266; font-weight: 600; margin: 0; }
+.em-label { font-size: 11px; color: #B45309; font-weight: 600; margin: 0; }
 
 /* 투명 안내 */
 .transp-note { font-size: 11px; color: #AAA; }
