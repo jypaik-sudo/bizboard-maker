@@ -21,9 +21,12 @@ st.markdown("""
 #MainMenu { display: none !important; }
 footer { display: none !important; }
 
-/* 전체 배경 그라데이션 + 상단 여백 제거 */
+/* 전체 배경: 회색 베이스 + 좌상단·우하단 라벤더 블롭 */
 [data-testid="stAppViewContainer"] {
-    background: linear-gradient(160deg, #ECECEC 0%, #EAE6F4 55%, #E4DDEF 100%) !important;
+    background-color: #EFEFEF !important;
+    background-image:
+        radial-gradient(ellipse 60% 50% at 0% 0%, rgba(180,160,230,0.38) 0%, transparent 70%),
+        radial-gradient(ellipse 55% 45% at 100% 100%, rgba(170,145,225,0.32) 0%, transparent 70%) !important;
     min-height: 100vh;
 }
 [data-testid="stMainBlockContainer"] { max-width: 820px; padding: 16px 16px 40px; }
@@ -31,22 +34,23 @@ footer { display: none !important; }
 
 /* 헤더 */
 .topbar {
-    background: rgba(255,255,255,0.72);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-radius: 14px; padding: 14px 20px;
-    display: flex; align-items: center; gap: 12px;
-    margin-bottom: 20px;
-    border: 1px solid rgba(255,255,255,0.85);
-    box-shadow: 0 2px 12px rgba(58,29,150,.07), 0 1px 3px rgba(0,0,0,.04);
+    display: flex; align-items: center; gap: 14px;
+    padding: 20px 4px 10px; margin-bottom: 16px;
 }
-.topbar-title { font-size: 16px; font-weight: 800; color: #1a1a1a; letter-spacing: -.3px; }
 .ably-badge {
+    display: inline-flex; align-items: center; justify-content: center;
     background: #FFDE00;
-    padding: 3px 10px; border-radius: 6px;
-    font-size: 12px; font-weight: 900; color: #1a1a1a;
-    letter-spacing: .5px;
-    box-shadow: 0 1px 3px rgba(0,0,0,.12);
+    padding: 0 14px; border-radius: 8px;
+    height: 44px;
+    font-size: 16px; font-weight: 900; color: #1a1a1a;
+    letter-spacing: .8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.15);
+    flex-shrink: 0;
+}
+.topbar-title {
+    font-size: 26px; font-weight: 800; color: #1a1a1a;
+    letter-spacing: -.5px; line-height: 44px;
+    margin: 0;
 }
 
 /* 카드 */
@@ -175,13 +179,13 @@ if "creatives"  not in st.session_state: st.session_state.creatives  = [_new()]
 
 
 # ── 헤더 ────────────────────────────────────────────────────────────────────────
-_c1, _c2 = st.columns([1, 6])
-_c1.markdown(
-    '<div style="background:#FFDE00;border-radius:6px;padding:6px 10px;'
-    'font-weight:800;font-size:14px;text-align:center;margin-top:2px;">ABLY</div>',
+st.markdown(
+    '<div class="topbar">'
+    '<span class="ably-badge">ABLY</span>'
+    '<span class="topbar-title">비즈보드 소재 제작기</span>'
+    '</div>',
     unsafe_allow_html=True,
 )
-_c2.markdown("## 비즈보드 소재 제작기")
 
 # 피그마 페이지명
 st.session_state.page_name = st.text_input(
