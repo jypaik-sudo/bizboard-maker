@@ -153,15 +153,13 @@ if "creatives"  not in st.session_state: st.session_state.creatives  = [_new()]
 
 
 # ── 헤더 ────────────────────────────────────────────────────────────────────────
-st.html(
-    '<div style="background:white;border-radius:12px;padding:12px 18px;'
-    'margin-bottom:8px;border:1.5px solid #E8E8E8;'
-    'box-shadow:0 1px 4px rgba(0,0,0,.05);">'
-    '<span style="background:#FFDE00;padding:3px 10px;border-radius:5px;'
-    'font-size:13px;font-weight:800;color:#1a1a1a;margin-right:10px;">ABLY</span>'
-    '<span style="font-size:16px;font-weight:800;color:#1a1a1a;">비즈보드 소재 제작기</span>'
-    '</div>'
+_c1, _c2 = st.columns([1, 6])
+_c1.markdown(
+    '<div style="background:#FFDE00;border-radius:6px;padding:6px 10px;'
+    'font-weight:800;font-size:14px;text-align:center;margin-top:2px;">ABLY</div>',
+    unsafe_allow_html=True,
 )
+_c2.markdown("## 비즈보드 소재 제작기")
 
 # 피그마 페이지명
 st.session_state.page_name = st.text_input(
