@@ -310,7 +310,7 @@ def _card(idx: int, c: dict):
         st.markdown("<div class='s-card-title'>오브젝트 이미지</div>", unsafe_allow_html=True)
 
         if fmt in LOGO_FMTS:
-            # 로고 카테고리: 브랜드 로고 1장 업로드 (자동 누끼)
+            # 로고 카테고리: 브랜드 로고 + 레퍼런스 + 상품 이미지
             st.caption("브랜드 로고 ✱ (자동 누끼 처리)")
             logo_file = st.file_uploader(
                 "브랜드 로고", type=["png","jpg","jpeg","webp"],
@@ -324,33 +324,34 @@ def _card(idx: int, c: dict):
                     c["brand_logo"] = raw
             if c.get("brand_logo"):
                 st.image(c["brand_logo"], use_container_width=True)
-        else:
-            col_ref, col_prod = st.columns(2)
-            with col_ref:
-                st.caption("레퍼런스 (선택)")
-                ref = st.file_uploader("레퍼런스", type=["png","jpg","jpeg","webp"],
-                                       key=f"ref_{cid}", label_visibility="collapsed")
-                if ref:
-                    c["reference_image"] = ref.read()
-                    st.image(c["reference_image"], use_container_width=True)
-            with col_prod:
-                st.caption("상품 이미지 ✱ (1~3장)")
-                prods = st.file_uploader("상품 이미지", type=["png","jpg","jpeg","webp"],
-                                         accept_multiple_files=True, key=f"prod_{cid}",
-                                         label_visibility="collapsed")
-                if prods:
-                    raws = [f.read() for f in prods[:3]]
-                    if REMOVEBG_KEY:
-                        with st.spinner("배경 제거 중…"):
-                            c["product_images"] = [remove_background(b, REMOVEBG_KEY) for b in raws]
-                    else:
-                        c["product_images"] = raws
-                    for b in c["product_images"]:
-                        st.image(b, use_container_width=True)
-            c["object_type"] = st.radio(
-                "배치 타입", ["단독","카테고리","믹스(코디)"], horizontal=True,
-                index=["단독","카테고리","믹스(코디)"].index(c.get("object_type","단독")),
-                key=f"otype_{cid}")
+            st.markdown("<div class='s-divider' style='margin:10px 0'></div>", unsafe_allow_html=True)
+
+        col_ref, col_prod = st.columns(2)
+        with col_ref:
+            st.caption("레퍼런스 (선택)")
+            ref = st.file_uploader("레퍼런스", type=["png","jpg","jpeg","webp"],
+                                   key=f"ref_{cid}", label_visibility="collapsed")
+            if ref:
+                c["reference_image"] = ref.read()
+                st.image(c["reference_image"], use_container_width=True)
+        with col_prod:
+            st.caption("상품 이미지 ✱ (1~3장)")
+            prods = st.file_uploader("상품 이미지", type=["png","jpg","jpeg","webp"],
+                                     accept_multiple_files=True, key=f"prod_{cid}",
+                                     label_visibility="collapsed")
+            if prods:
+                raws = [f.read() for f in prods[:3]]
+                if REMOVEBG_KEY:
+                    with st.spinner("배경 제거 중…"):
+                        c["product_images"] = [remove_background(b, REMOVEBG_KEY) for b in raws]
+                else:
+                    c["product_images"] = raws
+                for b in c["product_images"]:
+                    st.image(b, use_container_width=True)
+        c["object_type"] = st.radio(
+            "배치 타입", ["단독","카테고리","믹스(코디)"], horizontal=True,
+            index=["단독","카테고리","믹스(코디)"].index(c.get("object_type","단독")),
+            key=f"otype_{cid}")
 
         st.markdown("<hr class='s-divider'>", unsafe_allow_html=True)
 
