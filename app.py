@@ -609,7 +609,7 @@ def _card(idx, c, logo):
                     # ── 폰트·로고 크기 ───────────────────────────────────
                     if fmt in LOGO_FMTS and fmt not in THREE_FIELD_FMTS:
                         # 기본+텍스트 / 기본+뱃지: 로고 사이즈 + 서브카피
-                        st.caption("로고 35~120px  ·  서브카피 39~51pt")
+                        st.caption("크기 조정  ·  로고 35-120px / 서브카피 39-51pt")
                         la, lb = st.columns(2)
                         ls_new = la.number_input(
                             "로고 사이즈 (px)", min_value=35, max_value=120,
@@ -626,7 +626,7 @@ def _card(idx, c, logo):
 
                     elif fmt in LOGO_FMTS and fmt in THREE_FIELD_FMTS:
                         # 가운데+텍스트 / 가운데+뱃지: 로고 + 메인카피(우) + 서브카피
-                        st.caption("로고 35~120px  ·  메인카피(우)·서브카피 39~51pt")
+                        st.caption("크기 조정  ·  로고 35-120px / 메인카피(우)·서브카피 39-51pt")
                         la, lb, lc = st.columns(3)
                         ls_new = la.number_input(
                             "로고 (px)", min_value=35, max_value=120,
@@ -667,7 +667,7 @@ def _card(idx, c, logo):
                         adj["sub_size"] = int(ss_new)
                         adj["sub_size_set"] = True
                     else:
-                        st.caption("폰트 크기  39~51 pt")
+                        st.caption("폰트 크기  39-51 pt")
                         fa, fb = st.columns(2)
                         ms_new = fa.number_input(
                             "메인카피 (pt)", min_value=39, max_value=51,
