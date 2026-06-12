@@ -470,13 +470,15 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
     # 1. 이미지 오브젝트 배치
     _MIN_GAP = 33  # 로고 우측 ↔ 오브젝트 좌측 최소 간격
 
-    # 로고 포맷: 메인카피 블록과 동일한 y 레이아웃으로 로고+서브카피 배치
-    # total_block = logo_h + GAP + sub_h → 캔버스 세로 중앙 정렬
+    # 로고 우측: logo+서브카피 블록 세로 중앙 정렬
     _logo_block_h = _logo_size + GAP + _sub_size
-    _logo_y = max(10, CANVAS_H // 2 - _logo_block_h // 2)
+    _logo_y_right = max(10, CANVAS_H // 2 - _logo_block_h // 2)
+    # 로고 가운데: 로고 단독 캔버스 세로 중앙 정렬 (서브카피는 우측 별도 존)
+    _logo_y_center = (CANVAS_H - _logo_size) // 2
 
     if key in LOGO_RIGHT_FMTS:
-        # 브랜드 로고 → 좌측 x=48, 메인카피 y 위치 (메인카피 대체)
+        # 브랜드 로고 → 좌측 x=48, logo+서브 블록 y (메인카피 대체)
+        _logo_y = _logo_y_right
         if brand_logo:
             obj_left = obj_box[0] if obj_box else CANVAS_W
             _logo_max_w = max(1, obj_left - 48 - _MIN_GAP)
@@ -486,7 +488,8 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
             _paste(canvas, product_images[0], obj_box, rotation=_obj_rot)
 
     elif key in LOGO_FMTS:
-        # 브랜드 로고 → 좌측 x=48, 메인카피 y 위치 (메인카피(좌) 대체)
+        # 브랜드 로고 → 좌측 x=48, 캔버스 세로 중앙 (서브카피는 우측 존에 별도 배치)
+        _logo_y = _logo_y_center
         if brand_logo:
             obj_left = obj_box[0] if obj_box else CANVAS_W
             _logo_max_w = max(1, obj_left - 48 - _MIN_GAP)
@@ -562,7 +565,6 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
                 pass
 
     # 3. 텍스트 블록
-    # _logo_y, _logo_block_h 은 위쪽 이미지 배치 블록에서 이미 계산됨
     if key in LOGO_RIGHT_FMTS:
         # 로고가 메인카피 대체 → 서브카피만 로고 아래 20px 간격으로 배치
         logo_bottom = _logo_y + _logo_size + GAP
