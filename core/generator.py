@@ -327,17 +327,28 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
 
     adj        = creative.get("adjustments", {})
     _text_dx   = int(adj.get("text_dx",  0))
-    _text_dy   = int(adj.get("text_dy",  0))
+    _text_dy   = int(adj.get("text_dy",  0))   # 현재 UI에서 제거됨, 하위 호환
+    _left_dx   = int(adj.get("left_dx",  0))   # CENTER_FMTS 메인카피(좌) X
+    _right_dx  = int(adj.get("right_dx", 0))   # CENTER_FMTS 메인카피(우) X
     _main_size = int(adj.get("main_size", MAIN_PT))
     _sub_size  = int(adj.get("sub_size",  SUB_PT))
     _obj_dx    = int(adj.get("obj_dx",   0))
     _obj_dy    = int(adj.get("obj_dy",   0))
     _obj_rot   = float(adj.get("obj_rotation", 0.0))
+    _obj_scale = float(adj.get("obj_scale", 100)) / 100.0
     _em_size   = int(adj.get("em_size",  52))
     _em_hue    = float(adj.get("em_hue", 0.0))
 
     key = _fmt_key(fmt)
     obj_box, text_x, _lw, right_x, _rw = ZONES.get(key, ZONES["텍스트강조"])
+
+    # obj_scale 적용 (박스 중심 고정, 비율 조정)
+    if obj_box and _obj_scale != 1.0:
+        cx = (obj_box[0] + obj_box[2]) // 2
+        cy = (obj_box[1] + obj_box[3]) // 2
+        hw = int((obj_box[2] - obj_box[0]) * _obj_scale / 2)
+        hh = int((obj_box[3] - obj_box[1]) * _obj_scale / 2)
+        obj_box = (cx - hw, cy - hh, cx + hw, cy + hh)
 
     # obj_box offset 적용
     if obj_box and (_obj_dx or _obj_dy):
@@ -444,11 +455,11 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
     elif key in CENTER_FMTS:
         # 좌측 존: 메인카피(좌) 텍스트 — 로고 가운데는 None이므로 스킵
         if text_x is not None and main_copy:
-            _draw_left_zone(draw, text_x, CANVAS_H // 2, main_copy, _lw, pt=_main_size)
+            _draw_left_zone(draw, text_x + _left_dx, CANVAS_H // 2, main_copy, _lw, pt=_main_size)
         # 우측 존: 메인카피(우) + 서브카피
         if right_x and (sub_copy or sub_right):
             _draw_text_block(
-                draw, right_x + _text_dx, CANVAS_H // 2 + _text_dy,
+                draw, right_x + _right_dx, CANVAS_H // 2,
                 sub_copy, sub_right,
                 emphasis_text, emphasis_color, emphasis_type,
                 main_pt=_main_size, sub_pt=_sub_size,

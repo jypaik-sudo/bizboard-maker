@@ -307,21 +307,78 @@ def _do_adj_both(cid, key1, key2, delta, lo, hi):
             break
 
 # ── ◀ 값 ▶ 스테퍼 UI ─────────────────────────────────────────────────────────
-def _adj_stepper(col, cid, adj, key, label, lo, hi, step, unit="px"):
+def _adj_stepper(col, cid, adj, key, label, lo, hi, step, unit="px", default=0):
     with col:
         st.markdown(f"<div class='stepper-label'>{label}</div>", unsafe_allow_html=True)
-        val = max(lo, min(hi, adj.get(key, 0)))
+        val = max(lo, min(hi, adj.get(key, default)))
         adj[key] = val
         sc1, sc2, sc3 = st.columns([1, 2, 1])
         sc1.button("◀", key=f"{key}_d_{cid}", use_container_width=True,
                    disabled=(val <= lo), on_click=_do_adj, args=(cid, key, -step, lo, hi))
-        color_cls = "step-zero" if val == 0 else "step-val"
+        color_cls = "step-zero" if val == default else "step-val"
         sign = "+" if val > 0 else ""
+        disp = f"{val}{unit}" if unit == "%" else f"{sign}{val}{unit}"
         sc2.markdown(
-            f"<div class='{color_cls}'>{sign}{val}{unit}</div>",
+            f"<div class='{color_cls}'>{disp}</div>",
             unsafe_allow_html=True)
         sc3.button("▶", key=f"{key}_i_{cid}", use_container_width=True,
                    disabled=(val >= hi), on_click=_do_adj, args=(cid, key, +step, lo, hi))
+
+
+# ── 간격 경고 계산 ────────────────────────────────────────────────────────────
+def _gap_warning(fmt, adj):
+    """오브젝트↔카피 간격 33px 미만 시 (True, 메시지) 반환."""
+    from core.generator import ZONES
+    _FMTMAP = {
+        "가운데 오브젝트": "가운데 오브젝트",
+        "[믹스] 텍스트강조": "믹스 텍스트강조",
+        "[믹스] 할인율뱃지": "믹스 할인율뱃지",
+        "[로고] 가운데+텍스트": "로고 가운데+텍스트",
+        "[로고] 가운데+뱃지": "로고 가운데+뱃지",
+        "텍스트강조": "텍스트강조",
+        "할인율뱃지": "할인율뱃지",
+        "서브텍스트강조": "서브텍스트강조",
+        "[로고] 우측+텍스트": "로고 우측+텍스트",
+        "[로고] 우측+뱃지": "로고 우측+뱃지",
+    }
+    key = _FMTMAP.get(fmt, fmt)
+    zone = ZONES.get(key)
+    if not zone:
+        return False, ""
+    obj_box, text_x, lw, right_x, _rw = zone
+    if not obj_box:
+        return False, ""
+
+    scale  = adj.get("obj_scale", 100) / 100.0
+    obj_dx = adj.get("obj_dx", 0)
+    cx = (obj_box[0] + obj_box[2]) // 2
+    hw = int((obj_box[2] - obj_box[0]) * scale / 2)
+    obj_left  = cx - hw + obj_dx
+    obj_right = cx + hw + obj_dx
+    MIN = 33
+
+    if fmt in THREE_FIELD_FMTS:
+        # 우측 텍스트와 오브젝트 오른쪽 경계
+        if right_x is not None:
+            gap = (right_x + adj.get("right_dx", 0)) - obj_right
+            if gap < MIN:
+                return True, f"오브젝트↔메인카피(우) 간격 {gap}px — 최소 {MIN}px 필요"
+        # 좌측 텍스트와 오브젝트 왼쪽 경계
+        if text_x is not None:
+            text_right_est = text_x + adj.get("left_dx", 0) + lw
+            gap = obj_left - text_right_est
+            if gap < MIN:
+                return True, f"메인카피(좌)↔오브젝트 간격 {gap}px — 최소 {MIN}px 필요"
+    else:
+        # 오브젝트가 우측, 텍스트가 좌측
+        text_dx = adj.get("text_dx", 0)
+        if text_x is not None:
+            text_right_est = text_x + text_dx + 380
+            gap = obj_left - text_right_est
+            if gap < MIN:
+                return True, f"텍스트↔오브젝트 간격 {gap}px — 최소 {MIN}px 필요"
+
+    return False, ""
 
 # ── 카드 렌더 ─────────────────────────────────────────────────────────────────
 def _card(idx, c, logo):
@@ -474,10 +531,9 @@ def _card(idx, c, logo):
 
                     # ── 폰트 크기 (39~51 pt) ─────────────────────────────
                     if fmt in THREE_FIELD_FMTS:
-                        # 메인카피(좌)·(우) 동일 크기 고정 — 단일 컨트롤
                         st.caption("카피 폰트  39~51 pt  ·  메인(좌·우) 항상 동일")
                         ms = max(39, min(51, adj.get("main_size", MAIN_PT)))
-                        adj["main_size"] = ms; adj["sub_size"] = ms  # 강제 동기화
+                        adj["main_size"] = ms; adj["sub_size"] = ms
                         _sp, fc1, fc2, fc3, _sp2 = st.columns([1,1,2,1,1])
                         fc1.button("−", key=f"ms_d_{cid}", use_container_width=True,
                                    disabled=(ms<=39), on_click=_do_adj_both,
@@ -489,7 +545,7 @@ def _card(idx, c, logo):
                                    disabled=(ms>=51), on_click=_do_adj_both,
                                    args=(cid,"main_size","sub_size",+1,39,51))
                     else:
-                        st.caption("폰트 크기  39 ~ 51 pt")
+                        st.caption("폰트 크기  39~51 pt")
                         fa, fb = st.columns(2)
                         with fa:
                             st.markdown("<div style='font-size:11px;color:#888;margin-bottom:3px'>메인카피</div>", unsafe_allow_html=True)
@@ -514,22 +570,34 @@ def _card(idx, c, logo):
 
                     st.markdown('<hr class="s">', unsafe_allow_html=True)
 
-                    # ── 텍스트 블록 이동 ──────────────────────────────────
-                    # 가이드: 좌측 여백 최소 48px → 기본 위치가 이미 48px이므로 좌측 이동 불가
-                    st.caption("텍스트 블록 이동  ·  4px 단위  ·  좌측 여백 48px 보호")
-                    ta, tb = st.columns(2)
-                    _adj_stepper(ta, cid, adj, "text_dx", "→ X →",   0, 150, 4)   # 우측 이동만
-                    _adj_stepper(tb, cid, adj, "text_dy", "↑ Y ↓", -40,  40, 4)
+                    # ── 텍스트 X 이동 ─────────────────────────────────────
+                    # Y축 이동 없음 — 자동 수직 중앙 정렬 / 메인↔서브 간격 20px 고정
+                    if fmt in THREE_FIELD_FMTS:
+                        # 오브젝트 가운데: 좌·우 카피 개별 이동
+                        st.caption("카피 X 이동  ·  4px 단위  ·  좌측 여백 48px 보호")
+                        tx1, tx2 = st.columns(2)
+                        _adj_stepper(tx1, cid, adj, "left_dx",  "메인(좌) →",   0, 150, 4)
+                        _adj_stepper(tx2, cid, adj, "right_dx", "메인(우) →",   0, 150, 4)
+                    else:
+                        # 오브젝트 우측: 메인+서브 함께 이동
+                        st.caption("텍스트 X 이동  ·  4px 단위  ·  좌측 여백 48px 보호")
+                        _tx_col, _ = st.columns([1, 1])
+                        _adj_stepper(_tx_col, cid, adj, "text_dx", "→ X →", 0, 150, 4)
 
                     st.markdown('<hr class="s">', unsafe_allow_html=True)
 
-                    # ── 오브젝트 이동·기울기 ──────────────────────────────
-                    # 가이드: 오브젝트 영역 우측 절반 기준, 캔버스 밖 이동 불가
-                    st.caption("오브젝트 이동·기울기  ·  4px / 1° 단위")
-                    oa, ob, oc = st.columns(3)
-                    _adj_stepper(oa, cid, adj, "obj_dx",       "← X →", -60,  80, 4)
-                    _adj_stepper(ob, cid, adj, "obj_dy",       "↑ Y ↓", -40,  40, 4)
-                    _adj_stepper(oc, cid, adj, "obj_rotation", "기울기", -30,  30, 1, "°")
+                    # ── 오브젝트 이동·크기·기울기 ─────────────────────────
+                    st.caption("오브젝트  ·  4px / 5% / 1° 단위")
+                    oa, ob, oc, od = st.columns(4)
+                    _adj_stepper(oa, cid, adj, "obj_dx",       "← X →",  -60,  80, 4)
+                    _adj_stepper(ob, cid, adj, "obj_dy",       "↑ Y ↓",  -40,  40, 4)
+                    _adj_stepper(oc, cid, adj, "obj_scale",    "크기",    70, 130, 5, "%", default=100)
+                    _adj_stepper(od, cid, adj, "obj_rotation", "기울기", -30,  30, 1, "°")
+
+                    # ── 간격 경고 ─────────────────────────────────────────
+                    has_warn, warn_msg = _gap_warning(fmt, adj)
+                    if has_warn:
+                        st.warning(f"⚠️ {warn_msg}", icon=None)
 
                 # adj 변경 감지 → 자동 재생성
                 adj_hash = hashlib.md5(json.dumps(adj, sort_keys=True).encode()).hexdigest()
