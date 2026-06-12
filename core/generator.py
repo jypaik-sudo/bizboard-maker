@@ -16,7 +16,7 @@ LEFT_MAIN_PT = 32
 SUB_PT       = 39   # 피그마 실측 39px
 BADGE_H      = 50   # 피그마: text-[24px] + py-[13px]*2 = 50px
 GAP          = 20   # 카카오 비즈보드 가이드: 메인↔서브 간격 20px
-LOGO_H       = 40   # 카카오 비즈보드 가이드: ABLY 로고 높이 35~45px (기본 40px)
+LOGO_H       = 21   # 피그마 실측 (node 3470-381): inset top=9.3%*258=24, bottom=45 → h=21px
 LOGO_PAD     = (50, 24)   # (right_margin, top) — 피그마: x=878, y=24, w≈101
 
 # ABLY 로고 회피 영역: 우측 상단 (이모티콘 배치 시 제외)

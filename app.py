@@ -297,6 +297,15 @@ def _do_adj(cid, key, delta, lo, hi):
             a[key] = max(lo, min(hi, a.get(key, 0) + delta))
             break
 
+def _do_adj_both(cid, key1, key2, delta, lo, hi):
+    """두 키를 항상 같은 값으로 동기화 (메인카피 좌·우 폰트 동일 고정용)"""
+    for cr in st.session_state.creatives:
+        if cr["id"] == cid:
+            a = cr.setdefault("adjustments", {})
+            v = max(lo, min(hi, a.get(key1, lo + (hi-lo)//2) + delta))
+            a[key1] = v; a[key2] = v
+            break
+
 # ── ◀ 값 ▶ 스테퍼 UI ─────────────────────────────────────────────────────────
 def _adj_stepper(col, cid, adj, key, label, lo, hi, step, unit="px"):
     with col:
@@ -464,28 +473,44 @@ def _card(idx, c, logo):
                 with st.expander("📐 위치·크기 조정", expanded=bool(c.get("result_png"))):
 
                     # ── 폰트 크기 (39~51 pt) ─────────────────────────────
-                    st.caption("폰트 크기  39 ~ 51 pt")
-                    fa, fb = st.columns(2)
-                    with fa:
-                        st.markdown("<div style='font-size:11px;color:#888;margin-bottom:3px'>메인카피</div>", unsafe_allow_html=True)
+                    if fmt in THREE_FIELD_FMTS:
+                        # 메인카피(좌)·(우) 동일 크기 고정 — 단일 컨트롤
+                        st.caption("카피 폰트  39~51 pt  ·  메인(좌·우) 항상 동일")
                         ms = max(39, min(51, adj.get("main_size", MAIN_PT)))
-                        adj["main_size"] = ms
-                        fm1, fm2, fm3 = st.columns([1, 2, 1])
-                        fm1.button("−", key=f"ms_d_{cid}", use_container_width=True,
-                                   disabled=(ms<=39), on_click=_do_adj, args=(cid,"main_size",-1,39,51))
-                        fm2.markdown(f"<div style='text-align:center;font-size:15px;font-weight:800;color:#1a1a1a;padding:3px 0'>{ms} pt</div>", unsafe_allow_html=True)
-                        fm3.button("+", key=f"ms_i_{cid}", use_container_width=True,
-                                   disabled=(ms>=51), on_click=_do_adj, args=(cid,"main_size",+1,39,51))
-                    with fb:
-                        st.markdown("<div style='font-size:11px;color:#888;margin-bottom:3px'>서브카피</div>", unsafe_allow_html=True)
-                        ss = max(39, min(51, adj.get("sub_size", SUB_PT)))
-                        adj["sub_size"] = ss
-                        fs1, fs2, fs3 = st.columns([1, 2, 1])
-                        fs1.button("−", key=f"ss_d_{cid}", use_container_width=True,
-                                   disabled=(ss<=39), on_click=_do_adj, args=(cid,"sub_size",-1,39,51))
-                        fs2.markdown(f"<div style='text-align:center;font-size:15px;font-weight:800;color:#1a1a1a;padding:3px 0'>{ss} pt</div>", unsafe_allow_html=True)
-                        fs3.button("+", key=f"ss_i_{cid}", use_container_width=True,
-                                   disabled=(ss>=51), on_click=_do_adj, args=(cid,"sub_size",+1,39,51))
+                        adj["main_size"] = ms; adj["sub_size"] = ms  # 강제 동기화
+                        _sp, fc1, fc2, fc3, _sp2 = st.columns([1,1,2,1,1])
+                        fc1.button("−", key=f"ms_d_{cid}", use_container_width=True,
+                                   disabled=(ms<=39), on_click=_do_adj_both,
+                                   args=(cid,"main_size","sub_size",-1,39,51))
+                        fc2.markdown(f"<div style='text-align:center;font-size:15px;font-weight:800;"
+                                     f"color:#1a1a1a;padding:3px 0'>{ms} pt</div>",
+                                     unsafe_allow_html=True)
+                        fc3.button("+", key=f"ms_i_{cid}", use_container_width=True,
+                                   disabled=(ms>=51), on_click=_do_adj_both,
+                                   args=(cid,"main_size","sub_size",+1,39,51))
+                    else:
+                        st.caption("폰트 크기  39 ~ 51 pt")
+                        fa, fb = st.columns(2)
+                        with fa:
+                            st.markdown("<div style='font-size:11px;color:#888;margin-bottom:3px'>메인카피</div>", unsafe_allow_html=True)
+                            ms = max(39, min(51, adj.get("main_size", MAIN_PT)))
+                            adj["main_size"] = ms
+                            fm1, fm2, fm3 = st.columns([1, 2, 1])
+                            fm1.button("−", key=f"ms_d_{cid}", use_container_width=True,
+                                       disabled=(ms<=39), on_click=_do_adj, args=(cid,"main_size",-1,39,51))
+                            fm2.markdown(f"<div style='text-align:center;font-size:15px;font-weight:800;color:#1a1a1a;padding:3px 0'>{ms} pt</div>", unsafe_allow_html=True)
+                            fm3.button("+", key=f"ms_i_{cid}", use_container_width=True,
+                                       disabled=(ms>=51), on_click=_do_adj, args=(cid,"main_size",+1,39,51))
+                        with fb:
+                            st.markdown("<div style='font-size:11px;color:#888;margin-bottom:3px'>서브카피</div>", unsafe_allow_html=True)
+                            ss = max(39, min(51, adj.get("sub_size", SUB_PT)))
+                            adj["sub_size"] = ss
+                            fs1, fs2, fs3 = st.columns([1, 2, 1])
+                            fs1.button("−", key=f"ss_d_{cid}", use_container_width=True,
+                                       disabled=(ss<=39), on_click=_do_adj, args=(cid,"sub_size",-1,39,51))
+                            fs2.markdown(f"<div style='text-align:center;font-size:15px;font-weight:800;color:#1a1a1a;padding:3px 0'>{ss} pt</div>", unsafe_allow_html=True)
+                            fs3.button("+", key=f"ss_i_{cid}", use_container_width=True,
+                                       disabled=(ss>=51), on_click=_do_adj, args=(cid,"sub_size",+1,39,51))
 
                     st.markdown('<hr class="s">', unsafe_allow_html=True)
 
