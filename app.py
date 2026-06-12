@@ -122,18 +122,17 @@ details summary{font-size:13px!important;font-weight:600!important}
 [data-testid="stNumberInputStepUp"]{
     background:#3A1D96!important;border-color:#3A1D96!important;
     min-width:36px!important;min-height:36px!important;
-    border-radius:6px!important;font-size:0!important;
-    display:flex!important;align-items:center!important;justify-content:center!important}
-[data-testid="stNumberInputStepDown"] *,
-[data-testid="stNumberInputStepUp"] *{display:none!important}
-[data-testid="stNumberInputStepDown"]::before{
-    content:"−"!important;color:#fff!important;font-size:22px!important;
-    font-weight:900!important;line-height:1!important;
-    display:block!important;pointer-events:none}
-[data-testid="stNumberInputStepUp"]::before{
-    content:"+"!important;color:#fff!important;font-size:22px!important;
-    font-weight:900!important;line-height:1!important;
-    display:block!important;pointer-events:none}
+    border-radius:6px!important;
+    display:flex!important;align-items:center!important;justify-content:center!important;
+    overflow:hidden!important}
+[data-testid="stNumberInputStepDown"] svg,
+[data-testid="stNumberInputStepUp"] svg{display:none!important}
+[data-testid="stNumberInputStepDown"]::after{
+    content:"−";color:#fff;font-size:22px;font-weight:900;line-height:1;
+    pointer-events:none;display:block}
+[data-testid="stNumberInputStepUp"]::after{
+    content:"+";color:#fff;font-size:22px;font-weight:900;line-height:1;
+    pointer-events:none;display:block}
 [data-testid="stNumberInputStepDown"]:hover,
 [data-testid="stNumberInputStepUp"]:hover{
     background:#5533CC!important;border-color:#5533CC!important}
@@ -178,16 +177,16 @@ ANTHROPIC_KEY = _secret("ANTHROPIC_API_KEY")
 
 # ── 포맷 정의 ─────────────────────────────────────────────────────────────────
 FORMATS = {
-    "기본":   ["가운데 오브젝트","텍스트강조","할인율뱃지","서브텍스트강조"],
-    "가운데": ["[믹스] 텍스트강조","[믹스] 할인율뱃지"],
+    "기본":   ["텍스트강조","할인율뱃지","서브텍스트강조"],
+    "가운데": ["가운데 오브젝트","[믹스] 텍스트강조","[믹스] 할인율뱃지"],
     "로고":   ["[로고] 우측+텍스트","[로고] 우측+뱃지","[로고] 가운데+텍스트","[로고] 가운데+뱃지"],
 }
 # 버튼 표시 라벨 — 한 줄 유지
 FMT_LABELS = {
-    "가운데 오브젝트":      "가운데",
     "텍스트강조":           "텍스트강조",
     "할인율뱃지":           "할인율뱃지",
     "서브텍스트강조":       "서브강조",
+    "가운데 오브젝트":      "기본",
     "[믹스] 텍스트강조":    "텍스트강조",
     "[믹스] 할인율뱃지":    "할인율뱃지",
     "[로고] 우측+텍스트":   "기본+텍스트",
@@ -636,13 +635,16 @@ def _card(idx, c, logo):
                     if has_warn:
                         st.warning(f"⚠️ {warn_msg}", icon=None)
 
-                # adj 변경 감지 → 자동 재생성
-                adj_hash = hashlib.md5(json.dumps(adj, sort_keys=True).encode()).hexdigest()
-                if c.get("result_png") and c.get("_adj_hash") != adj_hash:
-                    c["_adj_hash"] = adj_hash
-                    with st.spinner("업데이트 중…"):
-                        r = _do_gen(c, logo)
-                        if r: c["result_png"] = r
+                # 위치·크기 조정 후 "적용" 버튼으로만 재생성
+                if c.get("result_png"):
+                    adj_hash = hashlib.md5(json.dumps(adj, sort_keys=True).encode()).hexdigest()
+                    if c.get("_adj_hash") != adj_hash:
+                        if st.button("🔄 조정 적용", key=f"apply_adj_{cid}", use_container_width=True):
+                            c["_adj_hash"] = adj_hash
+                            with st.spinner("업데이트 중…"):
+                                r = _do_gen(c, logo)
+                                if r: c["result_png"] = r
+                            st.rerun()
 
                 # preview_slot에 최종 이미지 채우기
                 if c.get("result_png"):
@@ -778,47 +780,19 @@ if st.button("▶ 전체 소재 생성", type="primary", use_container_width=Tru
 
 done = [c for c in st.session_state.creatives if c.get("result_png")]
 if done:
-    buf = io.BytesIO()
-    with zipfile.ZipFile(buf,"w") as zf:
-        for i,c in enumerate(done):
-            zf.writestr(f"{c['name'] or f'creative_{i+1}'}.png", c["result_png"])
-    buf.seek(0)
+    @st.cache_data(show_spinner=False)
+    def _make_zip(keys: tuple, pngs: tuple) -> bytes:
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as zf:
+            for name, data in zip(keys, pngs):
+                zf.writestr(f"{name}.png", data)
+        return buf.getvalue()
+
+    _keys = tuple(c["name"] or f"creative_{i+1}" for i, c in enumerate(done))
+    _pngs = tuple(c["result_png"] for c in done)
+    zip_bytes = _make_zip(_keys, _pngs)
     st.download_button(
-        f"⬇ 전체 ZIP ({len(done)}개)", data=buf,
+        f"⬇ 전체 ZIP ({len(done)}개)", data=zip_bytes,
         file_name="bizboard.zip", mime="application/zip", use_container_width=True)
 
 _save(sid)
-
-# ── number_input +/- 버튼 JS 패치 ───────────────────────────────────────────
-import streamlit.components.v1 as _cmp
-_cmp.html("""
-<script>
-(function(){
-  var BTN='background:#3A1D96;border:none;border-radius:6px;'
-         +'width:36px;height:36px;padding:0;cursor:pointer;'
-         +'display:flex;align-items:center;justify-content:center;flex-shrink:0;';
-  var TXT='color:#fff;font-size:22px;font-weight:900;'
-         +'line-height:1;display:flex;align-items:center;justify-content:center;'
-         +'width:100%;height:100%;pointer-events:none;margin:0;padding:0;';
-  function patch(){
-    var doc=window.parent.document;
-    doc.querySelectorAll('[data-testid="stNumberInputStepDown"]:not([data-p])').forEach(function(b){
-      b.setAttribute('data-p','1');
-      b.setAttribute('style',BTN);
-      b.innerHTML='<b style="'+TXT+'">&#8722;</b>';
-    });
-    doc.querySelectorAll('[data-testid="stNumberInputStepUp"]:not([data-p])').forEach(function(b){
-      b.setAttribute('data-p','1');
-      b.setAttribute('style',BTN);
-      b.innerHTML='<b style="'+TXT+'">&#43;</b>';
-    });
-  }
-  patch();
-  new MutationObserver(function(){
-    doc2=window.parent.document;
-    doc2.querySelectorAll('[data-testid="stNumberInputStepDown"][data-p],[data-testid="stNumberInputStepUp"][data-p]').forEach(function(b){b.removeAttribute('data-p');});
-    patch();
-  }).observe(window.parent.document.body,{subtree:true,childList:true});
-})();
-</script>
-""", height=0)
