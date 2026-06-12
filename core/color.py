@@ -49,10 +49,10 @@ def extract_vibrant_color(image_bytes: bytes) -> str:
         raw_s = float(np.mean(bucket_pixels[:, 1]))
         raw_v = float(np.mean(bucket_pixels[:, 2]))
 
-        # 채도 부스트: 원본 × 1.6, 최소 0.85 보장
-        s_boosted = min(1.0, max(0.85, raw_s * 1.6))
-        # 명도 클램프: 너무 어둡거나 너무 밝으면 가독성 저하
-        v_adj = max(0.45, min(0.75, raw_v))
+        # 채도 최대화: 항상 1.0 (완전 쨍한 색상)
+        s_boosted = 1.0
+        # 명도 클램프: 0.85~0.95 (밝고 선명하게)
+        v_adj = max(0.85, min(0.95, raw_v * 1.5))
 
         r, g, b = colorsys.hsv_to_rgb(avg_h, s_boosted, v_adj)
         return "#{:02X}{:02X}{:02X}".format(int(r * 255), int(g * 255), int(b * 255))
