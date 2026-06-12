@@ -102,10 +102,11 @@ details summary{font-size:13px!important;font-weight:600!important}
 
 /* ── 업로드 박스 높이 강제 통일 ── */
 [data-testid="stFileUploaderDropzone"]{
-    height:82px!important;min-height:82px!important;max-height:82px!important;
+    height:100px!important;min-height:100px!important;max-height:100px!important;
     overflow:hidden!important;box-sizing:border-box!important}
 [data-testid="stFileUploaderDropzoneInstructions"]{font-size:12px!important}
-[data-testid="stFileUploader"]{min-height:110px!important}
+[data-testid="stFileUploader"]{min-height:130px!important;margin-top:6px!important;margin-bottom:6px!important}
+[data-testid="stFileUploader"] label{font-size:12px!important;margin-bottom:6px!important;display:block!important}
 
 /* ── stepper 값 표시 ── */
 .step-val{text-align:center;font-size:13px;font-weight:700;
@@ -412,7 +413,7 @@ def _card(idx, c, logo):
         gen_clicked = hc2.button(
             "▶ 소재 생성", key=f"gen_{cid}",
             type="primary", use_container_width=True)
-        del_clicked = hc3.button("🗑", key=f"del_{cid}", use_container_width=True)
+        del_clicked = hc3.button("삭제", key=f"del_{cid}", use_container_width=True)
 
         if gen_clicked:
             # 소재 생성 시 항상 adj 초기화 → 포맷 기본 위치로 리셋
