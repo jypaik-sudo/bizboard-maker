@@ -5,7 +5,8 @@ import io, uuid, zipfile, copy, hashlib, json, os, datetime
 import streamlit as st
 from core.generator import generate_png, MAIN_PT, SUB_PT
 from core.removebg import remove_background
-from core.emoji import fetch_emoji_candidates, pick_emoji_with_claude, fetch_emoji_png, recommend_color_with_claude
+from core.emoji import fetch_emoji_candidates, pick_emoji_with_claude, fetch_emoji_png
+from core.color import extract_vibrant_color
 
 
 @st.cache_data(ttl=86400)
@@ -308,9 +309,11 @@ def _fmt_selector(cid, current):
 # ── 생성 로직 ─────────────────────────────────────────────────────────────────
 def _do_gen(c, logo):
     try:
-        if c.get("use_recommend") and ANTHROPIC_KEY and c["format"] in HAS_EMPHASIS:
-            c["emphasis_color"] = recommend_color_with_claude(
-                c["main_copy"], c["sub_copy"], ANTHROPIC_KEY)
+        if c.get("use_recommend") and c["format"] in HAS_EMPHASIS:
+            prod_imgs = c.get("product_images") or []
+            if prod_imgs:
+                # 오브젝트 이미지 기반 색상 추출 → 채도 부스트
+                c["emphasis_color"] = extract_vibrant_color(prod_imgs[0])
         # emoji_items 변환 (bytes 추가)
         final_emoji_items = []
         for item in c.get("emoji_items", []):
