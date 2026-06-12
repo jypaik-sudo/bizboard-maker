@@ -119,32 +119,37 @@ details summary{font-size:13px!important;font-weight:600!important}
     background:#F8F6FF!important;border:1px solid #E8E0FF!important;
     border-radius:8px!important;padding:4px 2px!important}
 
+/* number_input 버튼 행 — 수직 중앙 정렬 강제 */
+[data-testid="stNumberInput"] > div{
+    display:flex!important;align-items:center!important}
+
 /* +/- 버튼 — 모서리 둥근 정사각형, 흰색 기호 */
 [data-testid="stNumberInputStepDown"],
 [data-testid="stNumberInputStepUp"]{
-    width:34px!important;height:34px!important;
-    min-width:34px!important;min-height:34px!important;
-    max-width:34px!important;max-height:34px!important;
+    width:32px!important;height:32px!important;
+    min-width:32px!important;min-height:32px!important;
+    max-width:32px!important;max-height:32px!important;
     background:#3A1D96!important;
     border:none!important;border-radius:8px!important;
     padding:0!important;cursor:pointer!important;
     position:relative!important;overflow:visible!important;
-    flex-shrink:0!important}
+    flex-shrink:0!important;
+    align-self:center!important;
+    margin-bottom:0!important;margin-top:0!important}
 /* SVG 아이콘 숨기기 */
 [data-testid="stNumberInputStepDown"] svg,
 [data-testid="stNumberInputStepUp"] svg{
     display:none!important}
-/* 흰색 +/- 기호 — pseudo-element로 삽입 */
+/* 흰색 +/- 기호 */
 [data-testid="stNumberInputStepDown"]::before,
-[data-testid="stNumberInputStepUp"]::before{
-    content:""!important}
+[data-testid="stNumberInputStepUp"]::before{content:""!important}
 [data-testid="stNumberInputStepDown"]::after,
 [data-testid="stNumberInputStepUp"]::after{
     display:block!important;
     position:absolute!important;
     top:0!important;left:0!important;right:0!important;bottom:0!important;
-    text-align:center!important;line-height:34px!important;
-    font-size:20px!important;font-weight:700!important;
+    text-align:center!important;line-height:32px!important;
+    font-size:19px!important;font-weight:700!important;
     color:#ffffff!important;pointer-events:none!important;
     font-family:sans-serif!important}
 [data-testid="stNumberInputStepDown"]::after{content:"−"!important}
