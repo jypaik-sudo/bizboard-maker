@@ -555,7 +555,7 @@ def _card(idx, c, logo):
                     raw = lf.getvalue(); h = hashlib.md5(raw).hexdigest()
                     if h != c.get("_brand_logo_hash"):
                         with st.spinner("누끼 처리…"):
-                            c["brand_logo"] = remove_background(raw, REMOVEBG_KEY)
+                            c["brand_logo"] = remove_background(raw, REMOVEBG_KEY, ANTHROPIC_KEY)
                         c["_brand_logo_hash"] = h
 
             ci1, ci2 = st.columns(2)
@@ -572,7 +572,7 @@ def _card(idx, c, logo):
                     hs = [hashlib.md5(b).hexdigest() for b in raws]
                     if hs != c.get("_prod_hashes"):
                         with st.spinner("누끼 처리…"):
-                            c["product_images"] = [remove_background(b, REMOVEBG_KEY) for b in raws]
+                            c["product_images"] = [remove_background(b, REMOVEBG_KEY, ANTHROPIC_KEY) for b in raws]
                         c["_prod_hashes"] = hs
 
             c["object_type"] = st.radio(
