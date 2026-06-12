@@ -75,7 +75,23 @@ div[data-testid="stHorizontalBlock"]:has([data-testid="stTextInput"]) > div:nth-
 .sec{font-size:14px;font-weight:800;color:#3A1D96;letter-spacing:.04em;margin:12px 0 4px;display:block}
 hr.s{border:none;border-top:1px solid #EEEEEE!important;margin:10px 0!important}
 
-/* ── 패널 배경 (border=True 제거 후 불필요) ── */
+/* ── 좌우 패널 카드 ── */
+/* col_l / col_r 칼럼 자체에 카드 배경 적용 */
+[data-testid="stColumn"]:has(.panel-left){
+    background:rgba(255,255,255,.82)!important;
+    border-radius:14px!important;
+    border:1px solid rgba(255,255,255,.95)!important;
+    box-shadow:0 2px 12px rgba(58,29,150,.08)!important;
+    padding:16px 20px!important;
+}
+[data-testid="stColumn"]:has(.panel-right){
+    background:rgba(255,255,255,.55)!important;
+    border-radius:14px!important;
+    border:1px solid rgba(200,190,240,.5)!important;
+    box-shadow:0 1px 6px rgba(58,29,150,.05)!important;
+    padding:16px 20px!important;
+}
+.panel-left,.panel-right{display:none}
 
 /* ── 미리보기 플레이스홀더 ── */
 .ph{height:160px;background:#f5f5f5;border-radius:8px;
@@ -496,6 +512,7 @@ def _card(idx, c, logo):
 
         # ── 좌측 폼 ─────────────────────────────────────────────────────────
         with col_l:
+            st.markdown('<span class="panel-left"></span>', unsafe_allow_html=True)
             # 포맷
             st.markdown('<span class="sec">포맷 선택</span>', unsafe_allow_html=True)
             _fmt_selector(cid, fmt)
@@ -599,6 +616,7 @@ def _card(idx, c, logo):
 
         # ── 우측 미리보기 + 조정 ────────────────────────────────────────────
         with col_r:
+            st.markdown('<span class="panel-right"></span>', unsafe_allow_html=True)
             # 미리보기 자리 예약
             preview_slot = st.empty()
             dl_slot = st.empty()
