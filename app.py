@@ -61,10 +61,10 @@ div[data-testid="column"] button[kind="primary"]{
 [data-testid="stTextInput"] input{height:42px!important;font-size:14px!important}
 [data-testid="stTextInput"] label{font-size:11px!important;color:#888!important;margin-bottom:2px!important}
 
-/* 소재명 행 버튼들 높이 고정 (소재 생성, 삭제) */
-div[data-testid="stHorizontalBlock"] > div:nth-child(n+2) button{
+/* 소재명 행 버튼들 높이 고정 — text input이 있는 행에만 적용 (포맷 선택 행 제외) */
+div[data-testid="stHorizontalBlock"]:has([data-testid="stTextInput"]) > div:nth-child(n+2) button{
     height:42px!important;min-height:42px!important;
-    margin-top:22px;  /* label 높이 보정 */
+    margin-top:22px;
     border-radius:8px!important;
     font-size:13px!important;font-weight:700!important;
     padding:0 12px!important;
@@ -100,9 +100,12 @@ details summary{font-size:13px!important;font-weight:600!important}
 [data-testid="stMainBlockContainer"] > div > div > [data-testid="stButton"]:last-of-type button[kind="primary"]{
     height:50px!important;font-size:15px!important;border-radius:10px!important}
 
-/* ── 업로드 박스 높이 통일 ── */
-[data-testid="stFileUploaderDropzone"]{min-height:82px!important;box-sizing:border-box!important}
+/* ── 업로드 박스 높이 강제 통일 ── */
+[data-testid="stFileUploaderDropzone"]{
+    height:82px!important;min-height:82px!important;max-height:82px!important;
+    overflow:hidden!important;box-sizing:border-box!important}
 [data-testid="stFileUploaderDropzoneInstructions"]{font-size:12px!important}
+[data-testid="stFileUploader"]{min-height:110px!important}
 
 /* ── stepper 값 표시 ── */
 .step-val{text-align:center;font-size:13px;font-weight:700;
@@ -219,16 +222,16 @@ def _set_fmt(cid, fmt):
         if cr["id"] == cid: cr["format"] = fmt; break
 
 def _fmt_selector(cid, current):
-    # 그룹 라벨을 버튼 행 위에 배치, 버튼은 그룹 내 개수에 맞게 가득 채움
-    # 기본·로고 = 좁은 버튼 4개, 믹스 = 넓은 버튼 2개 → 모두 꽉 참
+    # 모든 그룹 st.columns(4) 고정 → 그룹 간 버튼 위치 완벽 정렬
+    # CSS 버그 수정 후 (stHorizontalBlock:has(stTextInput) 로 스코핑) 정상 정렬됨
     for gi, (group, fmts) in enumerate(FORMATS.items()):
         if gi > 0:
-            st.markdown("<div style='height:5px'></div>", unsafe_allow_html=True)
+            st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
         st.markdown(
             f"<div style='font-size:10px;font-weight:800;color:#BBBBBB;"
             f"text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px'>{group}</div>",
             unsafe_allow_html=True)
-        cols = st.columns(len(fmts), gap="small")
+        cols = st.columns(4, gap="small")
         for i, fmt in enumerate(fmts):
             cols[i].button(
                 FMT_LABELS.get(fmt, fmt),
@@ -486,20 +489,22 @@ def _card(idx, c, logo):
 
                     st.markdown('<hr class="s">', unsafe_allow_html=True)
 
-                    # ── 텍스트 블록 이동 (가이드: 좌우 여백 확보) ────────
-                    st.caption("텍스트 블록 이동  ·  4px 단위")
+                    # ── 텍스트 블록 이동 ──────────────────────────────────
+                    # 가이드: 좌측 여백 최소 48px → 기본 위치가 이미 48px이므로 좌측 이동 불가
+                    st.caption("텍스트 블록 이동  ·  4px 단위  ·  좌측 여백 48px 보호")
                     ta, tb = st.columns(2)
-                    _adj_stepper(ta, cid, adj, "text_dx", "← X →", -140, 140, 4)
-                    _adj_stepper(tb, cid, adj, "text_dy", "↑ Y ↓",  -55,  55, 4)
+                    _adj_stepper(ta, cid, adj, "text_dx", "→ X →",   0, 150, 4)   # 우측 이동만
+                    _adj_stepper(tb, cid, adj, "text_dy", "↑ Y ↓", -40,  40, 4)
 
                     st.markdown('<hr class="s">', unsafe_allow_html=True)
 
                     # ── 오브젝트 이동·기울기 ──────────────────────────────
+                    # 가이드: 오브젝트 영역 우측 절반 기준, 캔버스 밖 이동 불가
                     st.caption("오브젝트 이동·기울기  ·  4px / 1° 단위")
                     oa, ob, oc = st.columns(3)
-                    _adj_stepper(oa, cid, adj, "obj_dx",       "← X →", -120, 120, 4)
-                    _adj_stepper(ob, cid, adj, "obj_dy",       "↑ Y ↓",  -55,  55, 4)
-                    _adj_stepper(oc, cid, adj, "obj_rotation", "기울기",  -30,  30, 1, "°")
+                    _adj_stepper(oa, cid, adj, "obj_dx",       "← X →", -60,  80, 4)
+                    _adj_stepper(ob, cid, adj, "obj_dy",       "↑ Y ↓", -40,  40, 4)
+                    _adj_stepper(oc, cid, adj, "obj_rotation", "기울기", -30,  30, 1, "°")
 
                 # adj 변경 감지 → 자동 재생성
                 adj_hash = hashlib.md5(json.dumps(adj, sort_keys=True).encode()).hexdigest()
