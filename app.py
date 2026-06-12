@@ -249,10 +249,13 @@ def _default_adj(fmt: str) -> dict:
         obj_dx=0, obj_dy=0, obj_scale=100, obj_rotation=0,
         text_dx=0, left_dx=0, right_dx=0,
     )
-    # 우측 오브젝트 포맷: ABLY 로고(x≈878~979, y≈24~45) 침범 방지
-    # 오브젝트 박스가 넓으므로 x를 약간 좌측으로 당겨 로고 영역과 겹침 최소화
+    # 서브텍스트강조: 메인 39pt, 서브 51pt
+    if fmt == "서브텍스트강조":
+        base["main_size"] = 39
+        base["sub_size"] = 51
+    # 우측 오브젝트 포맷: ABLY 로고 침범 방지
     if fmt not in THREE_FIELD_FMTS and fmt not in ("가운데 오브젝트",):
-        base["obj_dx"] = -20   # 기본 우측 박스에서 살짝 좌이동 → 로고 영역 여백 확보
+        base["obj_dx"] = -20
     return base
 
 

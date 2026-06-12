@@ -255,6 +255,7 @@ def _draw_text_block(
     emphasis_type: str = "none",
     main_pt: int | None = None,
     sub_pt: int | None = None,
+    center_w: int | None = None,   # 지정 시 텍스트 블록을 [x, x+center_w] 가운데 정렬
 ) -> None:
     _main_pt = main_pt if main_pt is not None else MAIN_PT
     _sub_pt  = sub_pt  if sub_pt  is not None else SUB_PT
@@ -269,8 +270,15 @@ def _draw_text_block(
     total_h = _main_pt + (GAP + _sub_h if has_sub else 0)
     y = y_center - total_h // 2
 
+    def _cx(text: str, font) -> int:
+        """center_w 적용 시 가운데 정렬 x 반환, 없으면 x 그대로."""
+        if not center_w:
+            return x
+        tw = _text_w(draw, text, font)
+        return x + max(0, (center_w - tw) // 2)
+
     if main_copy:
-        draw.text((x, y), main_copy, font=f_main, fill=MAIN_COLOR)
+        draw.text((_cx(main_copy, f_main), y), main_copy, font=f_main, fill=MAIN_COLOR)
 
     if not has_sub:
         return
@@ -278,12 +286,20 @@ def _draw_text_block(
     sub_y = y + _main_pt + GAP
 
     if emphasis_type == "badge" and emphasis_text:
-        badge_w = _draw_badge(draw, x, sub_y, emphasis_text, em_rgb)
-        cur_x = x + badge_w + 12
         remaining = sub_copy.replace(emphasis_text, "", 1).strip(" ,·") if sub_copy else ""
+        # 전체 블록 너비 측정 → 가운데 정렬 시작 x
+        rem_bbox = draw.textbbox((0, 0), remaining, font=f_sub) if remaining else (0, 0, 0, 0)
+        rem_w = rem_bbox[2] - rem_bbox[0]
+        badge_measure_w = _draw_badge.__wrapped__(emphasis_text, f_sub) if hasattr(_draw_badge, "__wrapped__") else None
+        # badge_w 사전 측정
+        _bfont = _font(True, 24)
+        _bbbox = draw.textbbox((0, 0), emphasis_text, font=_bfont)
+        _bw = _bbbox[2] - _bbbox[0] + 9 * 2
+        total_sub_w = _bw + (12 + rem_w if remaining else 0)
+        sub_x = x + max(0, (center_w - total_sub_w) // 2) if center_w else x
+        badge_w = _draw_badge(draw, sub_x, sub_y, emphasis_text, em_rgb)
+        cur_x = sub_x + badge_w + 12
         if remaining:
-            # 배지 높이(SUB_PT) 기준으로 텍스트 세로 가운데 정렬
-            rem_bbox = draw.textbbox((0, 0), remaining, font=f_sub)
             rem_h = rem_bbox[3] - rem_bbox[1]
             rem_y = sub_y + (BADGE_H - rem_h) // 2 - rem_bbox[1]
             draw.text((cur_x, rem_y), remaining, font=f_sub, fill=SUB_COLOR)
@@ -292,7 +308,10 @@ def _draw_text_block(
         idx    = sub_copy.index(emphasis_text)
         before = sub_copy[:idx]
         after  = sub_copy[idx + len(emphasis_text):]
-        cur_x  = x
+        # 전체 인라인 너비 측정 → 가운데 정렬 시작 x
+        total_sub_w = (_text_w(draw, before, f_sub) + _text_w(draw, emphasis_text, f_sub_bold)
+                       + _text_w(draw, after, f_sub))
+        cur_x = x + max(0, (center_w - total_sub_w) // 2) if center_w else x
         if before:
             draw.text((cur_x, sub_y), before, font=f_sub, fill=SUB_COLOR)
             cur_x += _text_w(draw, before, f_sub)
@@ -303,7 +322,7 @@ def _draw_text_block(
 
     else:
         if sub_copy:
-            draw.text((x, sub_y), sub_copy, font=f_sub, fill=SUB_COLOR)
+            draw.text((_cx(sub_copy, f_sub), sub_y), sub_copy, font=f_sub, fill=SUB_COLOR)
 
 
 def _fit_pt(draw: ImageDraw.ImageDraw, text: str, max_w: int, pt: int, min_pt: int = 20) -> int:
@@ -584,11 +603,14 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
     else:
         # 단일 존 (텍스트강조 / 할인율뱃지 / 서브텍스트강조)
         if main_copy or sub_copy:
+            # 서브텍스트강조: 텍스트 블록 좌측 존 가운데 정렬
+            _cw = _lw if key == "서브텍스트강조" else None
             _draw_text_block(
                 draw, text_x + _text_dx, CANVAS_H // 2 + _text_dy,
                 main_copy, sub_copy,
                 emphasis_text, emphasis_color, emphasis_type,
                 main_pt=_main_size, sub_pt=_sub_size,
+                center_w=_cw,
             )
 
     # 4. ABLY 로고 — 항상 우측 상단
