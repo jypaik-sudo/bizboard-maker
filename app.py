@@ -119,10 +119,10 @@ details summary{font-size:13px!important;font-weight:600!important}
     background:#F8F6FF!important;border:1px solid #E8E0FF!important;
     border-radius:8px!important;padding:4px 2px!important}
 
-/* number_input 내부 행: 버튼 wrap 방지, 세로 중앙 정렬, 패딩 */
-[data-testid="stNumberInput"] > div{
-    display:flex!important;align-items:center!important;
-    gap:4px!important;padding:4px 0!important;flex-wrap:nowrap!important}
+/* number_input 내부 모든 div — 세로 중앙 정렬 */
+[data-testid="stNumberInput"] div{
+    display:flex!important;align-items:center!important;flex-wrap:nowrap!important}
+[data-testid="stNumberInput"] input{flex:1!important}
 /* 버튼 부모 — 고정 너비로 stretch 차단 */
 [data-testid="stNumberInputStepDown"],
 [data-testid="stNumberInputStepUp"]{
@@ -135,6 +135,7 @@ details summary{font-size:13px!important;font-weight:600!important}
     padding:0!important;cursor:pointer!important;
     position:relative!important;overflow:visible!important;
     align-self:center!important}
+[data-testid="stNumberInputStepDown"]{margin-right:4px!important}
 /* SVG 숨기기 */
 [data-testid="stNumberInputStepDown"] svg,
 [data-testid="stNumberInputStepUp"] svg{display:none!important}
