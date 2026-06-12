@@ -18,6 +18,9 @@ BADGE_H      = 50   # 피그마: text-[24px] + py-[13px]*2 = 50px
 GAP          = 20   # 카카오 비즈보드 가이드: 메인↔서브 간격 20px
 LOGO_H       = 21   # 피그마 실측 (node 3470-381): inset top=9.3%*258=24, bottom=45 → h=21px
 LOGO_PAD     = (50, 24)   # (right_margin, top) — 피그마: x=878, y=24, w≈101
+BRAND_LOGO_H_DEFAULT = 40   # 브랜드 로고 기본 높이 (px)
+BRAND_LOGO_H_MIN     = 35
+BRAND_LOGO_H_MAX     = 45
 
 # ABLY 로고 회피 영역: 우측 상단 (이모티콘 배치 시 제외)
 _ABLY_SAFE_X = 830   # 이 x 좌표 이상 + y < 55 이면 ABLY 영역
@@ -56,6 +59,16 @@ def _paste_logo(canvas: Image.Image, logo_bytes: bytes) -> None:
     x = CANVAS_W - new_w - LOGO_PAD[0]
     y = LOGO_PAD[1]
     canvas.paste(logo, (x, y), logo.split()[3])
+
+
+def _paste_brand(canvas: Image.Image, brand_bytes: bytes, x: int, logo_h: int) -> int:
+    """브랜드 로고를 x 위치, 세로 중앙에 배치. 반환값: 로고 너비(px)."""
+    img = Image.open(io.BytesIO(brand_bytes)).convert("RGBA")
+    new_w = max(1, int(logo_h * img.width / img.height))
+    img = img.resize((new_w, logo_h), Image.LANCZOS)
+    y = (CANVAS_H - logo_h) // 2
+    canvas.paste(img, (x, y), img.split()[3])
+    return new_w
 
 
 def _dominant_color(img_bytes: bytes) -> tuple[int, int, int] | None:
@@ -349,10 +362,11 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
     _text_dy   = int(adj.get("text_dy",  0))   # 현재 UI에서 제거됨, 하위 호환
     _left_dx   = int(adj.get("left_dx",  0))   # CENTER_FMTS 메인카피(좌) X
     _right_dx  = int(adj.get("right_dx", 0))   # CENTER_FMTS 메인카피(우) X
-    _main_size = int(adj.get("main_size", MAIN_PT))
-    _sub_size  = int(adj.get("sub_size",  SUB_PT))
-    _obj_dx    = int(adj.get("obj_dx",   0))
-    _obj_dy    = int(adj.get("obj_dy",   0))
+    _main_size  = int(adj.get("main_size", MAIN_PT))
+    _sub_size   = int(adj.get("sub_size",  SUB_PT))
+    _logo_size  = max(BRAND_LOGO_H_MIN, min(BRAND_LOGO_H_MAX, int(adj.get("logo_size", BRAND_LOGO_H_DEFAULT))))
+    _obj_dx     = int(adj.get("obj_dx",   0))
+    _obj_dy     = int(adj.get("obj_dy",   0))
     _obj_rot   = float(adj.get("obj_rotation", 0.0))
     _obj_scale = float(adj.get("obj_scale", 100)) / 100.0
     _em_size   = int(adj.get("em_size",  52))
@@ -376,19 +390,17 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
 
     # 1. 이미지 오브젝트 배치
     if key in LOGO_RIGHT_FMTS:
-        # 브랜드 로고 → 상단 좌측 존
-        blz = BRAND_LOGO_ZONES.get(key)
-        if blz and brand_logo:
-            _paste(canvas, brand_logo, blz)
+        # 브랜드 로고 → 좌측 x=48, 세로 중앙 (메인카피 대체)
+        if brand_logo:
+            _paste_brand(canvas, brand_logo, 48, _logo_size)
         # 상품 → 우측 존
         if obj_box and product_images:
             _paste(canvas, product_images[0], obj_box, rotation=_obj_rot)
 
     elif key in LOGO_FMTS:
-        # 브랜드 로고 → 좌측 존
-        blz = BRAND_LOGO_ZONES.get(key)
-        if blz and brand_logo:
-            _paste(canvas, brand_logo, blz)
+        # 브랜드 로고 → 좌측 x=48, 세로 중앙 (메인카피(좌) 대체)
+        if brand_logo:
+            _paste_brand(canvas, brand_logo, 48, _logo_size)
         # 상품 → 가운데 존
         if obj_box and product_images:
             _paste(canvas, product_images[0], obj_box, rotation=_obj_rot)
@@ -461,12 +473,22 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
 
     # 3. 텍스트 블록
     if key in LOGO_RIGHT_FMTS:
-        # 브랜드 로고는 상단 좌측, 카피는 하단 좌측
-        text_y = CANVAS_H * 3 // 4   # ≈ 194px
-        if main_copy or sub_copy:
+        # 로고가 메인카피 대체 → 서브카피만 로고 아래에 배치
+        logo_bottom = (CANVAS_H + _logo_size) // 2 + GAP
+        if sub_copy:
             _draw_text_block(
-                draw, text_x + _text_dx, text_y + _text_dy,
-                main_copy, sub_copy,
+                draw, 48 + _text_dx, logo_bottom + _sub_size // 2,
+                "", sub_copy,
+                emphasis_text, emphasis_color, emphasis_type,
+                main_pt=_main_size, sub_pt=_sub_size,
+            )
+
+    elif key in LOGO_FMTS:
+        # 로고가 좌측 메인카피(좌) 대체 → 우측에만 서브카피
+        if right_x and (sub_copy or sub_right):
+            _draw_text_block(
+                draw, right_x + _right_dx, CANVAS_H // 2,
+                sub_copy, sub_right,
                 emphasis_text, emphasis_color, emphasis_type,
                 main_pt=_main_size, sub_pt=_sub_size,
             )

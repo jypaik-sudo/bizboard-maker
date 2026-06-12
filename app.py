@@ -245,6 +245,7 @@ def _default_adj(fmt: str) -> dict:
     """포맷에 따른 기본 adj — 소재 생성 클릭 시 항상 이 값으로 리셋."""
     base = dict(
         main_size=MAIN_PT, sub_size=SUB_PT,
+        logo_size=40,
         obj_dx=0, obj_dy=0, obj_scale=100, obj_rotation=0,
         text_dx=0, left_dx=0, right_dx=0,
     )
@@ -497,15 +498,22 @@ def _card(idx, c, logo):
                 # 카피
                 st.markdown('<span class="sec">카피</span>', unsafe_allow_html=True)
                 if fmt in THREE_FIELD_FMTS:
-                    c["main_copy"] = st.text_input(
-                        "메인카피(좌) Bold", value=c["main_copy"],
-                        placeholder="예: 쫀득 말랑 착화감", key=f"main_{cid}")
+                    # 로고 가운데 포맷: 메인카피(좌)는 로고가 대체 → 입력란 숨김
+                    if fmt not in LOGO_FMTS:
+                        c["main_copy"] = st.text_input(
+                            "메인카피(좌) Bold", value=c["main_copy"],
+                            placeholder="예: 쫀득 말랑 착화감", key=f"main_{cid}")
                     c["sub_copy"]  = st.text_input(
                         "메인카피(우) Bold", value=c["sub_copy"],
                         placeholder="예: 착화감 최고", key=f"sub_{cid}")
                     c["sub_right"] = st.text_input(
                         "서브카피 Regular", value=c.get("sub_right",""),
                         placeholder="예: 무료배송 + SALE", key=f"subr_{cid}")
+                elif fmt in LOGO_FMTS:
+                    # 로고 우측 포맷: 메인카피는 로고가 대체 → 서브카피만
+                    c["sub_copy"] = st.text_input(
+                        "서브카피 Regular", value=c["sub_copy"],
+                        placeholder="예: 무료배송 + SALE", key=f"sub_{cid}")
                 else:
                     c["main_copy"] = st.text_input(
                         "메인카피 Bold", value=c["main_copy"],
@@ -595,8 +603,48 @@ def _card(idx, c, logo):
                 # 조정 패널
                 with st.expander("📐 위치·크기 조정", expanded=bool(c.get("result_png"))):
 
-                    # ── 폰트 크기 (39~51 pt) ─────────────────────────────
-                    if fmt in THREE_FIELD_FMTS:
+                    # ── 폰트·로고 크기 ───────────────────────────────────
+                    if fmt in LOGO_FMTS and fmt not in THREE_FIELD_FMTS:
+                        # 기본+텍스트 / 기본+뱃지: 로고 사이즈 + 서브카피
+                        st.caption("크기 조정  ·  로고 35~45px / 서브카피 39~51pt")
+                        la, lb = st.columns(2)
+                        ls_new = la.number_input(
+                            "로고 사이즈 (px)", min_value=35, max_value=45,
+                            value=max(35, min(45, adj.get("logo_size", 40))),
+                            step=1, key=f"ni_ls_{cid}", format="%d",
+                        )
+                        adj["logo_size"] = int(ls_new)
+                        ss_new = lb.number_input(
+                            "서브카피 (pt)", min_value=39, max_value=51,
+                            value=max(39, min(51, adj.get("sub_size", SUB_PT))),
+                            step=1, key=f"ni_ss_{cid}", format="%d",
+                        )
+                        adj["sub_size"] = int(ss_new)
+
+                    elif fmt in LOGO_FMTS and fmt in THREE_FIELD_FMTS:
+                        # 가운데+텍스트 / 가운데+뱃지: 로고 + 메인카피(우) + 서브카피
+                        st.caption("크기 조정  ·  로고 35~45px / 메인카피(우)·서브카피 39~51pt")
+                        la, lb, lc = st.columns(3)
+                        ls_new = la.number_input(
+                            "로고 (px)", min_value=35, max_value=45,
+                            value=max(35, min(45, adj.get("logo_size", 40))),
+                            step=1, key=f"ni_ls_{cid}", format="%d",
+                        )
+                        adj["logo_size"] = int(ls_new)
+                        ms_new = lb.number_input(
+                            "메인카피(우) (pt)", min_value=39, max_value=51,
+                            value=max(39, min(51, adj.get("main_size", MAIN_PT))),
+                            step=1, key=f"ni_ms_{cid}", format="%d",
+                        )
+                        adj["main_size"] = int(ms_new)
+                        ss_new = lc.number_input(
+                            "서브카피 (pt)", min_value=39, max_value=51,
+                            value=max(39, min(51, adj.get("sub_size", SUB_PT))),
+                            step=1, key=f"ni_ss_{cid}", format="%d",
+                        )
+                        adj["sub_size"] = int(ss_new)
+
+                    elif fmt in THREE_FIELD_FMTS:
                         st.caption("카피 폰트 (pt)  ·  메인(좌·우) 항상 동일 / 서브 별도")
                         fa, fb = st.columns(2)
                         ms_new = fa.number_input(
@@ -605,9 +653,7 @@ def _card(idx, c, logo):
                             step=1, key=f"ni_ms_{cid}", format="%d",
                         )
                         adj["main_size"] = int(ms_new)
-                        # 서브카피 독립 설정 (초기값: SUB_PT, main_size와 무관)
                         _ss_init = adj.get("sub_size", SUB_PT)
-                        # 처음 렌더 시 sub_size가 main_size와 같으면(강제동기화 잔재) SUB_PT로 리셋
                         if _ss_init == adj["main_size"] and "sub_size_set" not in adj:
                             _ss_init = SUB_PT
                         ss_new = fb.number_input(
@@ -616,7 +662,7 @@ def _card(idx, c, logo):
                             step=1, key=f"ni_ss_{cid}", format="%d",
                         )
                         adj["sub_size"] = int(ss_new)
-                        adj["sub_size_set"] = True   # 사용자가 독립 설정했음을 표시
+                        adj["sub_size_set"] = True
                     else:
                         st.caption("폰트 크기  39~51 pt")
                         fa, fb = st.columns(2)
@@ -656,7 +702,7 @@ def _card(idx, c, logo):
                     # ── 오브젝트 이동·크기·기울기 ─────────────────────────
                     st.caption("오브젝트  ·  4px / 5% / 1° 단위")
                     oa, ob, oc, od = st.columns(4)
-                    _adj_stepper(oa, cid, adj, "obj_dx",       "← X →",  -60,  80, 4)
+                    _adj_stepper(oa, cid, adj, "obj_dx",       "← X →", -150,  80, 4)
                     _adj_stepper(ob, cid, adj, "obj_dy",       "↑ Y ↓",  -40,  40, 4)
                     _adj_stepper(oc, cid, adj, "obj_scale",    "크기",    70, 130, 5, "%", default=100)
                     _adj_stepper(od, cid, adj, "obj_rotation", "기울기", -30,  30, 1, "°")
