@@ -99,6 +99,18 @@ details summary{font-size:13px!important;font-weight:600!important}
 /* ── 전체 생성 버튼 ── */
 [data-testid="stMainBlockContainer"] > div > div > [data-testid="stButton"]:last-of-type button[kind="primary"]{
     height:50px!important;font-size:15px!important;border-radius:10px!important}
+
+/* ── 업로드 박스 높이 통일 ── */
+[data-testid="stFileUploaderDropzone"]{min-height:82px!important;box-sizing:border-box!important}
+[data-testid="stFileUploaderDropzoneInstructions"]{font-size:12px!important}
+
+/* ── stepper 값 표시 ── */
+.step-val{text-align:center;font-size:13px;font-weight:700;
+    color:#3A1D96;padding:5px 2px;background:#F8F6FF;
+    border-radius:6px;border:1px solid #E8E0FF;margin:0}
+.step-zero{color:#AAA!important}
+.stepper-label{font-size:10px;color:#AAA;text-align:center;margin-bottom:3px;
+    letter-spacing:.03em;font-weight:600}
 </style>
 """, unsafe_allow_html=True)
 
@@ -207,16 +219,18 @@ def _set_fmt(cid, fmt):
         if cr["id"] == cid: cr["format"] = fmt; break
 
 def _fmt_selector(cid, current):
-    # 모든 행을 동일한 5열(라벨 1 + 버튼 4)로 고정 → 그룹 간 버튼 위치 완벽 정렬
-    for group, fmts in FORMATS.items():
-        lc, c0, c1, c2, c3 = st.columns([1.2, 2.5, 2.5, 2.5, 2.5])
-        lc.markdown(
-            f"<div style='font-size:10px;font-weight:800;color:#AAA;"
-            f"text-transform:uppercase;letter-spacing:.06em;"
-            f"padding-top:8px;text-align:right;padding-right:4px'>{group}</div>",
+    # 그룹 라벨을 버튼 행 위에 배치, 버튼은 그룹 내 개수에 맞게 가득 채움
+    # 기본·로고 = 좁은 버튼 4개, 믹스 = 넓은 버튼 2개 → 모두 꽉 참
+    for gi, (group, fmts) in enumerate(FORMATS.items()):
+        if gi > 0:
+            st.markdown("<div style='height:5px'></div>", unsafe_allow_html=True)
+        st.markdown(
+            f"<div style='font-size:10px;font-weight:800;color:#BBBBBB;"
+            f"text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px'>{group}</div>",
             unsafe_allow_html=True)
+        cols = st.columns(len(fmts), gap="small")
         for i, fmt in enumerate(fmts):
-            [c0, c1, c2, c3][i].button(
+            cols[i].button(
                 FMT_LABELS.get(fmt, fmt),
                 key=f"fmt_{cid}_{fmt}",
                 type="primary" if fmt == current else "secondary",
@@ -270,11 +284,32 @@ def _do_gen(c, logo):
         st.error(str(e)); return None
 
 def _warn_guide(adj):
-    # main_size/sub_size는 number_input min/max_value로 이미 제한 → 경고 불필요
-    if abs(adj.get("text_dx",0)) > GUIDE["text_dx_limit"] or abs(adj.get("text_dy",0)) > GUIDE["text_dy_limit"]:
-        st.warning("⚠️ 텍스트 위치가 안전 영역 밖입니다.")
-    if abs(adj.get("obj_dx",0)) > GUIDE["obj_dx_limit"] or abs(adj.get("obj_dy",0)) > GUIDE["obj_dy_limit"]:
-        st.warning("⚠️ 오브젝트 위치가 안전 영역 밖입니다.")
+    pass  # 화살표 버튼이 하드 min/max 로 제한 → 경고 불필요
+
+# ── 조정값 변경 콜백 ──────────────────────────────────────────────────────────
+def _do_adj(cid, key, delta, lo, hi):
+    for cr in st.session_state.creatives:
+        if cr["id"] == cid:
+            a = cr.setdefault("adjustments", {})
+            a[key] = max(lo, min(hi, a.get(key, 0) + delta))
+            break
+
+# ── ◀ 값 ▶ 스테퍼 UI ─────────────────────────────────────────────────────────
+def _adj_stepper(col, cid, adj, key, label, lo, hi, step, unit="px"):
+    with col:
+        st.markdown(f"<div class='stepper-label'>{label}</div>", unsafe_allow_html=True)
+        val = max(lo, min(hi, adj.get(key, 0)))
+        adj[key] = val
+        sc1, sc2, sc3 = st.columns([1, 2, 1])
+        sc1.button("◀", key=f"{key}_d_{cid}", use_container_width=True,
+                   disabled=(val <= lo), on_click=_do_adj, args=(cid, key, -step, lo, hi))
+        color_cls = "step-zero" if val == 0 else "step-val"
+        sign = "+" if val > 0 else ""
+        sc2.markdown(
+            f"<div class='{color_cls}'>{sign}{val}{unit}</div>",
+            unsafe_allow_html=True)
+        sc3.button("▶", key=f"{key}_i_{cid}", use_container_width=True,
+                   disabled=(val >= hi), on_click=_do_adj, args=(cid, key, +step, lo, hi))
 
 # ── 카드 렌더 ─────────────────────────────────────────────────────────────────
 def _card(idx, c, logo):
@@ -424,26 +459,47 @@ def _card(idx, c, logo):
 
                 # 조정 패널
                 with st.expander("📐 위치·크기 조정", expanded=bool(c.get("result_png"))):
-                    ca, cb = st.columns(2)
-                    adj["main_size"] = ca.number_input(
-                        "메인카피 (pt)", min_value=39, max_value=51,
-                        value=max(39, min(51, adj.get("main_size", MAIN_PT))), key=f"ms_{cid}")
-                    adj["sub_size"]  = cb.number_input(
-                        "서브카피 (pt)", min_value=39, max_value=51,
-                        value=max(39, min(51, adj.get("sub_size",  SUB_PT))),  key=f"ss_{cid}")
 
-                    st.caption("텍스트 블록 이동")
-                    cc, cd = st.columns(2)
-                    adj["text_dx"] = cc.slider("← X →", -200, 200, adj.get("text_dx",0), key=f"tdx_{cid}")
-                    adj["text_dy"] = cd.slider("↑ Y ↓", -80, 80, adj.get("text_dy",0), key=f"tdy_{cid}")
+                    # ── 폰트 크기 (39~51 pt) ─────────────────────────────
+                    st.caption("폰트 크기  39 ~ 51 pt")
+                    fa, fb = st.columns(2)
+                    with fa:
+                        st.markdown("<div style='font-size:11px;color:#888;margin-bottom:3px'>메인카피</div>", unsafe_allow_html=True)
+                        ms = max(39, min(51, adj.get("main_size", MAIN_PT)))
+                        adj["main_size"] = ms
+                        fm1, fm2, fm3 = st.columns([1, 2, 1])
+                        fm1.button("−", key=f"ms_d_{cid}", use_container_width=True,
+                                   disabled=(ms<=39), on_click=_do_adj, args=(cid,"main_size",-1,39,51))
+                        fm2.markdown(f"<div style='text-align:center;font-size:15px;font-weight:800;color:#1a1a1a;padding:3px 0'>{ms} pt</div>", unsafe_allow_html=True)
+                        fm3.button("+", key=f"ms_i_{cid}", use_container_width=True,
+                                   disabled=(ms>=51), on_click=_do_adj, args=(cid,"main_size",+1,39,51))
+                    with fb:
+                        st.markdown("<div style='font-size:11px;color:#888;margin-bottom:3px'>서브카피</div>", unsafe_allow_html=True)
+                        ss = max(39, min(51, adj.get("sub_size", SUB_PT)))
+                        adj["sub_size"] = ss
+                        fs1, fs2, fs3 = st.columns([1, 2, 1])
+                        fs1.button("−", key=f"ss_d_{cid}", use_container_width=True,
+                                   disabled=(ss<=39), on_click=_do_adj, args=(cid,"sub_size",-1,39,51))
+                        fs2.markdown(f"<div style='text-align:center;font-size:15px;font-weight:800;color:#1a1a1a;padding:3px 0'>{ss} pt</div>", unsafe_allow_html=True)
+                        fs3.button("+", key=f"ss_i_{cid}", use_container_width=True,
+                                   disabled=(ss>=51), on_click=_do_adj, args=(cid,"sub_size",+1,39,51))
 
-                    st.caption("오브젝트 이동·기울기")
-                    ce, cf, crot = st.columns(3)
-                    adj["obj_dx"]       = ce.slider("← X →",  -160, 160, adj.get("obj_dx",0),       key=f"odx_{cid}")
-                    adj["obj_dy"]       = cf.slider("↑ Y ↓",   -80,  80, adj.get("obj_dy",0),       key=f"ody_{cid}")
-                    adj["obj_rotation"] = crot.slider("기울기°", -30,  30, adj.get("obj_rotation",0), key=f"orot_{cid}")
+                    st.markdown('<hr class="s">', unsafe_allow_html=True)
 
-                    _warn_guide(adj)
+                    # ── 텍스트 블록 이동 (가이드: 좌우 여백 확보) ────────
+                    st.caption("텍스트 블록 이동  ·  4px 단위")
+                    ta, tb = st.columns(2)
+                    _adj_stepper(ta, cid, adj, "text_dx", "← X →", -140, 140, 4)
+                    _adj_stepper(tb, cid, adj, "text_dy", "↑ Y ↓",  -55,  55, 4)
+
+                    st.markdown('<hr class="s">', unsafe_allow_html=True)
+
+                    # ── 오브젝트 이동·기울기 ──────────────────────────────
+                    st.caption("오브젝트 이동·기울기  ·  4px / 1° 단위")
+                    oa, ob, oc = st.columns(3)
+                    _adj_stepper(oa, cid, adj, "obj_dx",       "← X →", -120, 120, 4)
+                    _adj_stepper(ob, cid, adj, "obj_dy",       "↑ Y ↓",  -55,  55, 4)
+                    _adj_stepper(oc, cid, adj, "obj_rotation", "기울기",  -30,  30, 1, "°")
 
                 # adj 변경 감지 → 자동 재생성
                 adj_hash = hashlib.md5(json.dumps(adj, sort_keys=True).encode()).hexdigest()
