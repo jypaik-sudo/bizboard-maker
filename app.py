@@ -59,6 +59,7 @@ div[data-testid="column"] button[kind="primary"]{
     color:white!important;font-weight:700!important}
 
 /* ── 텍스트 입력란 ── */
+[data-testid="stTextInput"] > div{overflow:visible!important}
 [data-testid="stTextInput"] input{
     height:42px!important;font-size:14px!important;
     background:#fff!important;
@@ -66,10 +67,12 @@ div[data-testid="column"] button[kind="primary"]{
     border-radius:8px!important;
     color:#1a1a1a!important;
     padding:0 12px!important;
+    box-sizing:border-box!important;
 }
 [data-testid="stTextInput"] input:focus{
     border-color:#3A1D96!important;
     box-shadow:0 0 0 3px rgba(58,29,150,.12)!important;
+    outline:none!important;
 }
 [data-testid="stTextInput"] input::placeholder{color:#C0B8D8!important}
 [data-testid="stTextInput"] label{font-size:11px!important;color:#888!important;margin-bottom:2px!important}
@@ -132,10 +135,14 @@ details summary{font-size:13px!important;font-weight:600!important}
 [data-testid="stMainBlockContainer"] > div > div > [data-testid="stButton"]:last-of-type button[kind="primary"]{
     height:50px!important;font-size:15px!important;border-radius:10px!important}
 
-/* ── 업로드 박스 높이 강제 통일 ── */
+/* ── 업로드 박스 ── */
 [data-testid="stFileUploaderDropzone"]{
     height:100px!important;min-height:100px!important;max-height:100px!important;
-    overflow:hidden!important;box-sizing:border-box!important}
+    overflow:hidden!important;box-sizing:border-box!important;
+    border:1.5px solid #C8BEF0!important;
+    border-radius:8px!important;
+    background:#fff!important;
+}
 [data-testid="stFileUploaderDropzoneInstructions"]{font-size:12px!important}
 [data-testid="stFileUploader"]{min-height:130px!important;margin-top:6px!important;margin-bottom:6px!important}
 [data-testid="stFileUploader"] label{font-size:12px!important;margin-bottom:4px!important;color:#555!important}
