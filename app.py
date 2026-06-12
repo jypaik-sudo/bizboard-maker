@@ -245,7 +245,7 @@ def _default_adj(fmt: str) -> dict:
     """포맷에 따른 기본 adj — 소재 생성 클릭 시 항상 이 값으로 리셋."""
     base = dict(
         main_size=MAIN_PT, sub_size=SUB_PT,
-        logo_size=40,
+        logo_size=65,
         obj_dx=0, obj_dy=0, obj_scale=100, obj_rotation=0,
         text_dx=0, left_dx=0, right_dx=0,
     )
@@ -606,11 +606,11 @@ def _card(idx, c, logo):
                     # ── 폰트·로고 크기 ───────────────────────────────────
                     if fmt in LOGO_FMTS and fmt not in THREE_FIELD_FMTS:
                         # 기본+텍스트 / 기본+뱃지: 로고 사이즈 + 서브카피
-                        st.caption("크기 조정  ·  로고 35~45px / 서브카피 39~51pt")
+                        st.caption("크기 조정  ·  로고 35~120px / 서브카피 39~51pt")
                         la, lb = st.columns(2)
                         ls_new = la.number_input(
-                            "로고 사이즈 (px)", min_value=35, max_value=45,
-                            value=max(35, min(45, adj.get("logo_size", 40))),
+                            "로고 사이즈 (px)", min_value=35, max_value=120,
+                            value=max(35, min(120, adj.get("logo_size", 65))),
                             step=1, key=f"ni_ls_{cid}", format="%d",
                         )
                         adj["logo_size"] = int(ls_new)
@@ -623,11 +623,11 @@ def _card(idx, c, logo):
 
                     elif fmt in LOGO_FMTS and fmt in THREE_FIELD_FMTS:
                         # 가운데+텍스트 / 가운데+뱃지: 로고 + 메인카피(우) + 서브카피
-                        st.caption("크기 조정  ·  로고 35~45px / 메인카피(우)·서브카피 39~51pt")
+                        st.caption("크기 조정  ·  로고 35~120px / 메인카피(우)·서브카피 39~51pt")
                         la, lb, lc = st.columns(3)
                         ls_new = la.number_input(
-                            "로고 (px)", min_value=35, max_value=45,
-                            value=max(35, min(45, adj.get("logo_size", 40))),
+                            "로고 (px)", min_value=35, max_value=120,
+                            value=max(35, min(120, adj.get("logo_size", 65))),
                             step=1, key=f"ni_ls_{cid}", format="%d",
                         )
                         adj["logo_size"] = int(ls_new)

@@ -18,9 +18,9 @@ BADGE_H      = 50   # 피그마: text-[24px] + py-[13px]*2 = 50px
 GAP          = 20   # 카카오 비즈보드 가이드: 메인↔서브 간격 20px
 LOGO_H       = 21   # 피그마 실측 (node 3470-381): inset top=9.3%*258=24, bottom=45 → h=21px
 LOGO_PAD     = (50, 24)   # (right_margin, top) — 피그마: x=878, y=24, w≈101
-BRAND_LOGO_H_DEFAULT = 40   # 브랜드 로고 기본 높이 (px)
+BRAND_LOGO_H_DEFAULT = 65   # 브랜드 로고 기본 높이 (px) — 메인카피 역할 수행
 BRAND_LOGO_H_MIN     = 35
-BRAND_LOGO_H_MAX     = 45
+BRAND_LOGO_H_MAX     = 120
 
 # ABLY 로고 회피 영역: 우측 상단 (이모티콘 배치 시 제외)
 _ABLY_SAFE_X = 830   # 이 x 좌표 이상 + y < 55 이면 ABLY 영역
@@ -105,10 +105,10 @@ def _trim_logo(img: Image.Image) -> Image.Image:
 
 
 def _paste_brand(canvas: Image.Image, brand_bytes: bytes, x: int, logo_h: int,
-                  max_w: int | None = None) -> int:
-    """브랜드 로고를 x 위치, 세로 중앙에 배치.
-    logo_h: 목표 높이(px)로 항상 고정. max_w: 최대 허용 너비(오브젝트 여백 보호).
-    너비가 max_w를 초과하면 높이는 유지한 채 너비만 max_w로 클램프(가로 크롭).
+                  y: int | None = None, max_w: int | None = None) -> int:
+    """브랜드 로고를 x, y 위치에 배치.
+    logo_h: 목표 높이(px)로 항상 고정. y: 상단 y 좌표(None이면 캔버스 세로 중앙).
+    max_w: 최대 허용 너비 — 초과 시 높이 유지하며 중앙 크롭.
     반환값: 실제 로고 너비(px).
     """
     img = _trim_logo(Image.open(io.BytesIO(brand_bytes)))
@@ -122,8 +122,8 @@ def _paste_brand(canvas: Image.Image, brand_bytes: bytes, x: int, logo_h: int,
         crop_x = (actual_w - max_w) // 2
         img = img.crop((crop_x, 0, crop_x + max_w, actual_h))
         actual_w = max_w
-    y = (CANVAS_H - actual_h) // 2
-    canvas.paste(img, (x, y), img.split()[3])
+    paste_y = (CANVAS_H - actual_h) // 2 if y is None else y
+    canvas.paste(img, (x, paste_y), img.split()[3])
     return actual_w
 
 
@@ -447,22 +447,27 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
     # 1. 이미지 오브젝트 배치
     _MIN_GAP = 33  # 로고 우측 ↔ 오브젝트 좌측 최소 간격
 
+    # 로고 포맷: 메인카피 블록과 동일한 y 레이아웃으로 로고+서브카피 배치
+    # total_block = logo_h + GAP + sub_h → 캔버스 세로 중앙 정렬
+    _logo_block_h = _logo_size + GAP + _sub_size
+    _logo_y = max(10, CANVAS_H // 2 - _logo_block_h // 2)
+
     if key in LOGO_RIGHT_FMTS:
-        # 브랜드 로고 → 좌측 x=48, 세로 중앙 (메인카피 대체)
+        # 브랜드 로고 → 좌측 x=48, 메인카피 y 위치 (메인카피 대체)
         if brand_logo:
             obj_left = obj_box[0] if obj_box else CANVAS_W
             _logo_max_w = max(1, obj_left - 48 - _MIN_GAP)
-            _paste_brand(canvas, brand_logo, 48, _logo_size, max_w=_logo_max_w)
+            _paste_brand(canvas, brand_logo, 48, _logo_size, y=_logo_y, max_w=_logo_max_w)
         # 상품 → 우측 존
         if obj_box and product_images:
             _paste(canvas, product_images[0], obj_box, rotation=_obj_rot)
 
     elif key in LOGO_FMTS:
-        # 브랜드 로고 → 좌측 x=48, 세로 중앙 (메인카피(좌) 대체)
+        # 브랜드 로고 → 좌측 x=48, 메인카피 y 위치 (메인카피(좌) 대체)
         if brand_logo:
             obj_left = obj_box[0] if obj_box else CANVAS_W
             _logo_max_w = max(1, obj_left - 48 - _MIN_GAP)
-            _paste_brand(canvas, brand_logo, 48, _logo_size, max_w=_logo_max_w)
+            _paste_brand(canvas, brand_logo, 48, _logo_size, y=_logo_y, max_w=_logo_max_w)
         # 상품 → 가운데 존
         if obj_box and product_images:
             _paste(canvas, product_images[0], obj_box, rotation=_obj_rot)
@@ -534,9 +539,10 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
                 pass
 
     # 3. 텍스트 블록
+    # _logo_y, _logo_block_h 은 위쪽 이미지 배치 블록에서 이미 계산됨
     if key in LOGO_RIGHT_FMTS:
         # 로고가 메인카피 대체 → 서브카피만 로고 아래에 배치
-        logo_bottom = (CANVAS_H + _logo_size) // 2 + GAP
+        logo_bottom = _logo_y + _logo_size + GAP
         if sub_copy:
             _draw_text_block(
                 draw, 48 + _text_dx, logo_bottom + _sub_size // 2,
