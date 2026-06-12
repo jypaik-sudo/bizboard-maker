@@ -75,19 +75,7 @@ div[data-testid="stHorizontalBlock"]:has([data-testid="stTextInput"]) > div:nth-
 .sec{font-size:14px;font-weight:800;color:#3A1D96;letter-spacing:.04em;margin:12px 0 4px;display:block}
 hr.s{border:none;border-top:1px solid #EEEEEE!important;margin:10px 0!important}
 
-/* ── 좌측 패널 배경 ── */
-[data-testid="stVerticalBlockBorderWrapper"]:has(.left-marker){
-    background:rgba(255,255,255,.78)!important;
-    border-radius:12px!important;
-    border:1px solid rgba(255,255,255,.95)!important;
-    box-shadow:0 1px 5px rgba(58,29,150,.07)!important;
-}
-/* ── 우측 패널 배경 ── */
-[data-testid="stVerticalBlockBorderWrapper"]:has(.right-marker){
-    background:rgba(255,255,255,.45)!important;
-    border-radius:12px!important;
-    border:1px solid rgba(0,0,0,.07)!important;
-}
+/* ── 패널 배경 (border=True 제거 후 불필요) ── */
 
 /* ── 미리보기 플레이스홀더 ── */
 .ph{height:160px;background:#f5f5f5;border-radius:8px;
@@ -96,6 +84,21 @@ hr.s{border:none;border-top:1px solid #EEEEEE!important;margin:10px 0!important}
 
 /* ── expander ── */
 details summary{font-size:13px!important;font-weight:600!important}
+/* expander 내부 흰 배경 제거 → 배경색과 동화 */
+[data-testid="stExpander"]{
+    background:transparent!important;
+    border:none!important;
+    box-shadow:none!important;
+}
+[data-testid="stExpander"] > details{
+    background:transparent!important;
+    border:1px solid rgba(0,0,0,.08)!important;
+    border-radius:10px!important;
+}
+/* 소재 카드 expander 배경 */
+[data-testid="stExpander"][data-expanded="true"] > details > summary{
+    border-bottom:1px solid rgba(0,0,0,.06)!important;
+}
 
 /* ── 전체 생성 버튼 ── */
 [data-testid="stMainBlockContainer"] > div > div > [data-testid="stButton"]:last-of-type button[kind="primary"]{
@@ -493,332 +496,326 @@ def _card(idx, c, logo):
 
         # ── 좌측 폼 ─────────────────────────────────────────────────────────
         with col_l:
-            with st.container(border=True):
-                st.markdown('<span class="left-marker"></span>', unsafe_allow_html=True)
+            # 포맷
+            st.markdown('<span class="sec">포맷 선택</span>', unsafe_allow_html=True)
+            _fmt_selector(cid, fmt)
+            st.markdown('<hr class="s">', unsafe_allow_html=True)
 
-                # 포맷
-                st.markdown('<span class="sec">포맷 선택</span>', unsafe_allow_html=True)
-                _fmt_selector(cid, fmt)
-                st.markdown('<hr class="s">', unsafe_allow_html=True)
-
-                # 카피
-                st.markdown('<span class="sec">카피</span>', unsafe_allow_html=True)
-                if fmt in THREE_FIELD_FMTS:
-                    # 로고 가운데 포맷: 메인카피(좌)는 로고가 대체 → 입력란 숨김
-                    if fmt not in LOGO_FMTS:
-                        c["main_copy"] = st.text_input(
-                            "메인카피(좌) Bold", value=c["main_copy"],
-                            placeholder="예: 쫀득 말랑 착화감", key=f"main_{cid}")
-                    c["sub_copy"]  = st.text_input(
-                        "메인카피(우) Bold", value=c["sub_copy"],
-                        placeholder="예: 착화감 최고", key=f"sub_{cid}")
-                    c["sub_right"] = st.text_input(
-                        "서브카피 Regular", value=c.get("sub_right",""),
-                        placeholder="예: 무료배송 + SALE", key=f"subr_{cid}")
-                elif fmt in LOGO_FMTS:
-                    # 로고 우측 포맷: 메인카피는 로고가 대체 → 서브카피만
-                    c["sub_copy"] = st.text_input(
-                        "서브카피 Regular", value=c["sub_copy"],
-                        placeholder="예: 무료배송 + SALE", key=f"sub_{cid}")
-                else:
+            # 카피
+            st.markdown('<span class="sec">카피</span>', unsafe_allow_html=True)
+            if fmt in THREE_FIELD_FMTS:
+                # 로고 가운데 포맷: 메인카피(좌)는 로고가 대체 → 입력란 숨김
+                if fmt not in LOGO_FMTS:
                     c["main_copy"] = st.text_input(
-                        "메인카피 Bold", value=c["main_copy"],
-                        placeholder="예: 지금이 딱 좋아", key=f"main_{cid}")
-                    c["sub_copy"]  = st.text_input(
-                        "서브카피 Regular", value=c["sub_copy"],
-                        placeholder="예: 무료배송 + SALE", key=f"sub_{cid}")
+                        "메인카피(좌) Bold", value=c["main_copy"],
+                        placeholder="예: 쫀득 말랑 착화감", key=f"main_{cid}")
+                c["sub_copy"]  = st.text_input(
+                    "메인카피(우) Bold", value=c["sub_copy"],
+                    placeholder="예: 착화감 최고", key=f"sub_{cid}")
+                c["sub_right"] = st.text_input(
+                    "서브카피 Regular", value=c.get("sub_right",""),
+                    placeholder="예: 무료배송 + SALE", key=f"subr_{cid}")
+            elif fmt in LOGO_FMTS:
+                # 로고 우측 포맷: 메인카피는 로고가 대체 → 서브카피만
+                c["sub_copy"] = st.text_input(
+                    "서브카피 Regular", value=c["sub_copy"],
+                    placeholder="예: 무료배송 + SALE", key=f"sub_{cid}")
+            else:
+                c["main_copy"] = st.text_input(
+                    "메인카피 Bold", value=c["main_copy"],
+                    placeholder="예: 지금이 딱 좋아", key=f"main_{cid}")
+                c["sub_copy"]  = st.text_input(
+                    "서브카피 Regular", value=c["sub_copy"],
+                    placeholder="예: 무료배송 + SALE", key=f"sub_{cid}")
 
-                if fmt in HAS_EMPHASIS:
-                    _ref = c.get("sub_right","") if fmt in THREE_FIELD_FMTS else c["sub_copy"]
-                    q_label = "강조 텍스트" if em_type == "text" else "뱃지 텍스트"
-                    c["emphasis_text"] = st.text_input(
-                        q_label, value=c["emphasis_text"],
-                        placeholder="예: 무료배송 / 75%", key=f"em_{cid}")
-                    if c["emphasis_text"] and _ref and c["emphasis_text"] not in _ref:
-                        st.error(f"'{c['emphasis_text']}'가 서브카피에 없어요.")
-                    cr_, cc_ = st.columns(2)
-                    c["use_recommend"] = cr_.checkbox(
-                        "AI 색상 추천", value=c.get("use_recommend",True), key=f"rec_{cid}")
-                    if not c["use_recommend"]:
-                        c["emphasis_color"] = cc_.color_picker(
-                            "강조 색상", value=c.get("emphasis_color","#CC0000"), key=f"clr_{cid}")
+            if fmt in HAS_EMPHASIS:
+                _ref = c.get("sub_right","") if fmt in THREE_FIELD_FMTS else c["sub_copy"]
+                q_label = "강조 텍스트" if em_type == "text" else "뱃지 텍스트"
+                c["emphasis_text"] = st.text_input(
+                    q_label, value=c["emphasis_text"],
+                    placeholder="예: 무료배송 / 75%", key=f"em_{cid}")
+                if c["emphasis_text"] and _ref and c["emphasis_text"] not in _ref:
+                    st.error(f"'{c['emphasis_text']}'가 서브카피에 없어요.")
+                cr_, cc_ = st.columns(2)
+                c["use_recommend"] = cr_.checkbox(
+                    "AI 색상 추천", value=c.get("use_recommend",True), key=f"rec_{cid}")
+                if not c["use_recommend"]:
+                    c["emphasis_color"] = cc_.color_picker(
+                        "강조 색상", value=c.get("emphasis_color","#CC0000"), key=f"clr_{cid}")
 
-                st.markdown('<hr class="s">', unsafe_allow_html=True)
+            st.markdown('<hr class="s">', unsafe_allow_html=True)
 
-                # 이미지
-                st.markdown('<span class="sec">오브젝트 이미지</span>', unsafe_allow_html=True)
-                if fmt in LOGO_FMTS:
-                    st.caption("브랜드 로고 ✱ (자동 누끼)")
-                    lf = st.file_uploader("브랜드 로고", type=["png","jpg","jpeg","webp"],
-                                           key=f"blogo_{cid}", label_visibility="collapsed")
-                    if lf:
-                        raw = lf.getvalue(); h = hashlib.md5(raw).hexdigest()
-                        if h != c.get("_brand_logo_hash"):
-                            with st.spinner("누끼 처리…"):
-                                c["brand_logo"] = remove_background(raw, REMOVEBG_KEY)
-                            c["_brand_logo_hash"] = h
+            # 이미지
+            st.markdown('<span class="sec">오브젝트 이미지</span>', unsafe_allow_html=True)
+            if fmt in LOGO_FMTS:
+                st.caption("브랜드 로고 ✱ (자동 누끼)")
+                lf = st.file_uploader("브랜드 로고", type=["png","jpg","jpeg","webp"],
+                                       key=f"blogo_{cid}", label_visibility="collapsed")
+                if lf:
+                    raw = lf.getvalue(); h = hashlib.md5(raw).hexdigest()
+                    if h != c.get("_brand_logo_hash"):
+                        with st.spinner("누끼 처리…"):
+                            c["brand_logo"] = remove_background(raw, REMOVEBG_KEY)
+                        c["_brand_logo_hash"] = h
 
-                ci1, ci2 = st.columns(2)
-                with ci1:
-                    rf = st.file_uploader("레퍼런스 (선택)", type=["png","jpg","jpeg","webp"],
-                                           key=f"ref_{cid}")
-                    if rf: c["reference_image"] = rf.getvalue()
-                with ci2:
-                    prods = st.file_uploader(
-                        "상품 이미지 ✱  1~3장 · 자동 누끼", type=["png","jpg","jpeg","webp"],
-                        accept_multiple_files=True, key=f"prod_{cid}")
-                    if prods:
-                        raws = [f.getvalue() for f in prods[:3]]
-                        hs = [hashlib.md5(b).hexdigest() for b in raws]
-                        if hs != c.get("_prod_hashes"):
-                            with st.spinner("누끼 처리…"):
-                                c["product_images"] = [remove_background(b, REMOVEBG_KEY) for b in raws]
-                            c["_prod_hashes"] = hs
+            ci1, ci2 = st.columns(2)
+            with ci1:
+                rf = st.file_uploader("레퍼런스 (선택)", type=["png","jpg","jpeg","webp"],
+                                       key=f"ref_{cid}")
+                if rf: c["reference_image"] = rf.getvalue()
+            with ci2:
+                prods = st.file_uploader(
+                    "상품 이미지 ✱  1~3장 · 자동 누끼", type=["png","jpg","jpeg","webp"],
+                    accept_multiple_files=True, key=f"prod_{cid}")
+                if prods:
+                    raws = [f.getvalue() for f in prods[:3]]
+                    hs = [hashlib.md5(b).hexdigest() for b in raws]
+                    if hs != c.get("_prod_hashes"):
+                        with st.spinner("누끼 처리…"):
+                            c["product_images"] = [remove_background(b, REMOVEBG_KEY) for b in raws]
+                        c["_prod_hashes"] = hs
 
-                c["object_type"] = st.radio(
-                    "배치 타입", ["단독","카테고리","믹스(코디)"], horizontal=True,
-                    index=["단독","카테고리","믹스(코디)"].index(c.get("object_type","단독")),
-                    key=f"otype_{cid}")
+            c["object_type"] = st.radio(
+                "배치 타입", ["단독","카테고리","믹스(코디)"], horizontal=True,
+                index=["단독","카테고리","믹스(코디)"].index(c.get("object_type","단독")),
+                key=f"otype_{cid}")
 
-                st.markdown('<hr class="s">', unsafe_allow_html=True)
+            st.markdown('<hr class="s">', unsafe_allow_html=True)
 
-                # 이모티콘 + 복제
-                ec1, ec2 = st.columns([3,1])
-                c["use_emoji"] = ec1.toggle(
-                    "이모티콘 추가", value=c.get("use_emoji",False), key=f"emoji_{cid}")
-                ec2.button("📋 복제", key=f"dup_{cid}", use_container_width=True,
-                           on_click=lambda: _dup(cid))
-                if c["use_emoji"]:
-                    prev_kw = c.get("emoji_keywords","")
-                    c["emoji_keywords"] = st.text_input(
-                        "이모티콘 키워드", value=prev_kw,
-                        placeholder="예: 직장인, 컴퓨터 · 공란이면 카피 기반 자동",
-                        key=f"ekw_{cid}")
-                    if c["emoji_keywords"] != prev_kw:
-                        c["emoji_candidates"] = []
+            # 이모티콘 + 복제
+            ec1, ec2 = st.columns([3,1])
+            c["use_emoji"] = ec1.toggle(
+                "이모티콘 추가", value=c.get("use_emoji",False), key=f"emoji_{cid}")
+            ec2.button("📋 복제", key=f"dup_{cid}", use_container_width=True,
+                       on_click=lambda: _dup(cid))
+            if c["use_emoji"]:
+                prev_kw = c.get("emoji_keywords","")
+                c["emoji_keywords"] = st.text_input(
+                    "이모티콘 키워드", value=prev_kw,
+                    placeholder="예: 직장인, 컴퓨터 · 공란이면 카피 기반 자동",
+                    key=f"ekw_{cid}")
+                if c["emoji_keywords"] != prev_kw:
+                    c["emoji_candidates"] = []
 
         # ── 우측 미리보기 + 조정 ────────────────────────────────────────────
         with col_r:
-            with st.container(border=True):
-                st.markdown('<span class="right-marker"></span>', unsafe_allow_html=True)
+            # 미리보기 자리 예약
+            preview_slot = st.empty()
+            dl_slot = st.empty()
 
-                # 미리보기 자리 예약
-                preview_slot = st.empty()
-                dl_slot = st.empty()
+            # 조정 패널
+            with st.expander("📐 위치·크기 조정", expanded=bool(c.get("result_png"))):
 
-                # 조정 패널
-                with st.expander("📐 위치·크기 조정", expanded=bool(c.get("result_png"))):
+                # ── 폰트·로고 크기 ───────────────────────────────────
+                if fmt in LOGO_FMTS and fmt not in THREE_FIELD_FMTS:
+                    # 기본+텍스트 / 기본+뱃지: 로고 사이즈 + 서브카피
+                    st.caption("크기 조정  ·  로고 35-120px / 서브카피 39-51pt")
+                    la, lb = st.columns(2)
+                    ls_new = la.number_input(
+                        "로고 사이즈 (px)", min_value=35, max_value=120,
+                        value=max(35, min(120, adj.get("logo_size", 65))),
+                        step=1, key=f"ni_ls_{cid}", format="%d",
+                    )
+                    adj["logo_size"] = int(ls_new)
+                    ss_new = lb.number_input(
+                        "서브카피 (pt)", min_value=39, max_value=51,
+                        value=max(39, min(51, adj.get("sub_size", SUB_PT))),
+                        step=1, key=f"ni_ss_{cid}", format="%d",
+                    )
+                    adj["sub_size"] = int(ss_new)
 
-                    # ── 폰트·로고 크기 ───────────────────────────────────
-                    if fmt in LOGO_FMTS and fmt not in THREE_FIELD_FMTS:
-                        # 기본+텍스트 / 기본+뱃지: 로고 사이즈 + 서브카피
-                        st.caption("크기 조정  ·  로고 35-120px / 서브카피 39-51pt")
-                        la, lb = st.columns(2)
-                        ls_new = la.number_input(
-                            "로고 사이즈 (px)", min_value=35, max_value=120,
-                            value=max(35, min(120, adj.get("logo_size", 65))),
-                            step=1, key=f"ni_ls_{cid}", format="%d",
-                        )
-                        adj["logo_size"] = int(ls_new)
-                        ss_new = lb.number_input(
-                            "서브카피 (pt)", min_value=39, max_value=51,
-                            value=max(39, min(51, adj.get("sub_size", SUB_PT))),
-                            step=1, key=f"ni_ss_{cid}", format="%d",
-                        )
-                        adj["sub_size"] = int(ss_new)
+                elif fmt in LOGO_FMTS and fmt in THREE_FIELD_FMTS:
+                    # 가운데+텍스트 / 가운데+뱃지: 로고 + 메인카피(우) + 서브카피
+                    st.caption("크기 조정  ·  로고 35-120px / 메인카피(우)·서브카피 39-51pt")
+                    la, lb, lc = st.columns(3)
+                    ls_new = la.number_input(
+                        "로고 (px)", min_value=35, max_value=120,
+                        value=max(35, min(120, adj.get("logo_size", 65))),
+                        step=1, key=f"ni_ls_{cid}", format="%d",
+                    )
+                    adj["logo_size"] = int(ls_new)
+                    ms_new = lb.number_input(
+                        "메인카피(우) (pt)", min_value=39, max_value=51,
+                        value=max(39, min(51, adj.get("main_size", MAIN_PT))),
+                        step=1, key=f"ni_ms_{cid}", format="%d",
+                    )
+                    adj["main_size"] = int(ms_new)
+                    ss_new = lc.number_input(
+                        "서브카피 (pt)", min_value=39, max_value=51,
+                        value=max(39, min(51, adj.get("sub_size", SUB_PT))),
+                        step=1, key=f"ni_ss_{cid}", format="%d",
+                    )
+                    adj["sub_size"] = int(ss_new)
 
-                    elif fmt in LOGO_FMTS and fmt in THREE_FIELD_FMTS:
-                        # 가운데+텍스트 / 가운데+뱃지: 로고 + 메인카피(우) + 서브카피
-                        st.caption("크기 조정  ·  로고 35-120px / 메인카피(우)·서브카피 39-51pt")
-                        la, lb, lc = st.columns(3)
-                        ls_new = la.number_input(
-                            "로고 (px)", min_value=35, max_value=120,
-                            value=max(35, min(120, adj.get("logo_size", 65))),
-                            step=1, key=f"ni_ls_{cid}", format="%d",
-                        )
-                        adj["logo_size"] = int(ls_new)
-                        ms_new = lb.number_input(
-                            "메인카피(우) (pt)", min_value=39, max_value=51,
-                            value=max(39, min(51, adj.get("main_size", MAIN_PT))),
-                            step=1, key=f"ni_ms_{cid}", format="%d",
-                        )
-                        adj["main_size"] = int(ms_new)
-                        ss_new = lc.number_input(
-                            "서브카피 (pt)", min_value=39, max_value=51,
-                            value=max(39, min(51, adj.get("sub_size", SUB_PT))),
-                            step=1, key=f"ni_ss_{cid}", format="%d",
-                        )
-                        adj["sub_size"] = int(ss_new)
-
-                    elif fmt in THREE_FIELD_FMTS:
-                        st.caption("카피 폰트 (pt)  ·  메인(좌·우) 항상 동일 / 서브 별도")
-                        fa, fb = st.columns(2)
-                        ms_new = fa.number_input(
-                            "메인카피 39~51 (pt)", min_value=39, max_value=51,
-                            value=max(39, min(51, adj.get("main_size", MAIN_PT))),
-                            step=1, key=f"ni_ms_{cid}", format="%d",
-                        )
-                        adj["main_size"] = int(ms_new)
-                        _ss_init = adj.get("sub_size", SUB_PT)
-                        if _ss_init == adj["main_size"] and "sub_size_set" not in adj:
-                            _ss_init = SUB_PT
-                        ss_new = fb.number_input(
-                            "서브카피 39~51 (pt)", min_value=39, max_value=51,
-                            value=max(39, min(51, _ss_init)),
-                            step=1, key=f"ni_ss_{cid}", format="%d",
-                        )
-                        adj["sub_size"] = int(ss_new)
-                        adj["sub_size_set"] = True
-                    else:
-                        st.caption("폰트 크기  39-51 pt")
-                        fa, fb = st.columns(2)
-                        ms_new = fa.number_input(
-                            "메인카피 (pt)", min_value=39, max_value=51,
-                            value=max(39, min(51, adj.get("main_size", MAIN_PT))),
-                            step=1, key=f"ni_ms_{cid}", format="%d",
-                        )
-                        adj["main_size"] = int(ms_new)
-                        ss_new = fb.number_input(
-                            "서브카피 (pt)", min_value=39, max_value=51,
-                            value=max(39, min(51, adj.get("sub_size", SUB_PT))),
-                            step=1, key=f"ni_ss_{cid}", format="%d",
-                        )
-                        adj["sub_size"] = int(ss_new)
-
-                    st.markdown('<hr class="s">', unsafe_allow_html=True)
-
-                    # ── 텍스트 X 이동 ─────────────────────────────────────
-                    # Y축 이동 없음 — 자동 수직 중앙 정렬 / 메인↔서브 간격 20px 고정
-                    if fmt in THREE_FIELD_FMTS:
-                        # 오브젝트 가운데: 좌카피(우방향+) / 우카피(좌방향-)
-                        st.caption("카피 X 이동  ·  4px 단위  ·  좌측 48px·우측 48px 여백 보호")
-                        tx1, tx2 = st.columns(2)
-                        # 메인(좌): base x=48, +방향(→)으로만 이동 → 최대 obj 33px 전까지
-                        _adj_stepper(tx1, cid, adj, "left_dx",  "메인(좌) →",    0, 100, 4)
-                        # 메인(우): base x=698, -방향(←)으로만 이동 → 우측 여백 48px 보호
-                        _adj_stepper(tx2, cid, adj, "right_dx", "← 메인(우)", -100,   0, 4)
-                    else:
-                        # 오브젝트 우측: 메인+서브 함께 이동
-                        st.caption("텍스트 X 이동  ·  4px 단위  ·  좌측 48px 여백 보호")
-                        _tc1, _tc2 = st.columns([1, 1])
-                        _adj_stepper(_tc1, cid, adj, "text_dx", "→ X →", 0, 100, 4)
-
-                    st.markdown('<hr class="s">', unsafe_allow_html=True)
-
-                    # ── 오브젝트 이동·크기·기울기 ─────────────────────────
-                    st.caption("오브젝트  ·  4px / 5% / 1° 단위")
-                    oa, ob, oc, od = st.columns(4)
-                    _adj_stepper(oa, cid, adj, "obj_dx",       "← X →", -150, 200, 4)
-                    _adj_stepper(ob, cid, adj, "obj_dy",       "↑ Y ↓",  -40,  40, 4)
-                    _adj_stepper(oc, cid, adj, "obj_scale",    "크기",    70, 130, 5, "%", default=100)
-                    _adj_stepper(od, cid, adj, "obj_rotation", "기울기", -30,  30, 1, "°")
-
-                    # ── 간격 경고 ─────────────────────────────────────────
-                    has_warn, warn_msg = _gap_warning(fmt, adj)
-                    if has_warn:
-                        st.warning(f"⚠️ {warn_msg}", icon=None)
-
-                # 위치·크기 조정 후 "적용" 버튼으로만 재생성
-                if c.get("result_png"):
-                    adj_hash = hashlib.md5(json.dumps(adj, sort_keys=True).encode()).hexdigest()
-                    if c.get("_adj_hash") != adj_hash:
-                        if st.button("🔄 조정 적용", key=f"apply_adj_{cid}", use_container_width=True):
-                            c["_adj_hash"] = adj_hash
-                            with st.spinner("업데이트 중…"):
-                                r = _do_gen(c, logo)
-                                if r: c["result_png"] = r
-                            st.rerun()
-
-                # preview_slot에 최종 이미지 채우기
-                if c.get("result_png"):
-                    preview_slot.image(c["result_png"], use_container_width=True)
-                    dl_slot.download_button(
-                        "⬇ PNG 저장", data=c["result_png"],
-                        file_name=f"{c['name'] or f'creative_{idx+1}'}.png",
-                        mime="image/png", key=f"dl_{cid}",
-                        use_container_width=True)
+                elif fmt in THREE_FIELD_FMTS:
+                    st.caption("카피 폰트 (pt)  ·  메인(좌·우) 항상 동일 / 서브 별도")
+                    fa, fb = st.columns(2)
+                    ms_new = fa.number_input(
+                        "메인카피 39~51 (pt)", min_value=39, max_value=51,
+                        value=max(39, min(51, adj.get("main_size", MAIN_PT))),
+                        step=1, key=f"ni_ms_{cid}", format="%d",
+                    )
+                    adj["main_size"] = int(ms_new)
+                    _ss_init = adj.get("sub_size", SUB_PT)
+                    if _ss_init == adj["main_size"] and "sub_size_set" not in adj:
+                        _ss_init = SUB_PT
+                    ss_new = fb.number_input(
+                        "서브카피 39~51 (pt)", min_value=39, max_value=51,
+                        value=max(39, min(51, _ss_init)),
+                        step=1, key=f"ni_ss_{cid}", format="%d",
+                    )
+                    adj["sub_size"] = int(ss_new)
+                    adj["sub_size_set"] = True
                 else:
-                    preview_slot.markdown('<div class="ph">▶ 소재 생성을 눌러주세요</div>',
-                                          unsafe_allow_html=True)
+                    st.caption("폰트 크기  39-51 pt")
+                    fa, fb = st.columns(2)
+                    ms_new = fa.number_input(
+                        "메인카피 (pt)", min_value=39, max_value=51,
+                        value=max(39, min(51, adj.get("main_size", MAIN_PT))),
+                        step=1, key=f"ni_ms_{cid}", format="%d",
+                    )
+                    adj["main_size"] = int(ms_new)
+                    ss_new = fb.number_input(
+                        "서브카피 (pt)", min_value=39, max_value=51,
+                        value=max(39, min(51, adj.get("sub_size", SUB_PT))),
+                        step=1, key=f"ni_ss_{cid}", format="%d",
+                    )
+                    adj["sub_size"] = int(ss_new)
 
-                # 이모티콘 픽커
-                if c.get("use_emoji"):
-                    if "emoji_items" not in c:
-                        c["emoji_items"] = []
+                st.markdown('<hr class="s">', unsafe_allow_html=True)
 
-                    with st.expander("😀 이모티콘 선택 · 세부 설정"):
-                        kw = c.get("emoji_keywords","") or (c["main_copy"]+" "+c["sub_copy"])
+                # ── 텍스트 X 이동 ─────────────────────────────────────
+                # Y축 이동 없음 — 자동 수직 중앙 정렬 / 메인↔서브 간격 20px 고정
+                if fmt in THREE_FIELD_FMTS:
+                    # 오브젝트 가운데: 좌카피(우방향+) / 우카피(좌방향-)
+                    st.caption("카피 X 이동  ·  4px 단위  ·  좌측 48px·우측 48px 여백 보호")
+                    tx1, tx2 = st.columns(2)
+                    # 메인(좌): base x=48, +방향(→)으로만 이동 → 최대 obj 33px 전까지
+                    _adj_stepper(tx1, cid, adj, "left_dx",  "메인(좌) →",    0, 100, 4)
+                    # 메인(우): base x=698, -방향(←)으로만 이동 → 우측 여백 48px 보호
+                    _adj_stepper(tx2, cid, adj, "right_dx", "← 메인(우)", -100,   0, 4)
+                else:
+                    # 오브젝트 우측: 메인+서브 함께 이동
+                    st.caption("텍스트 X 이동  ·  4px 단위  ·  좌측 48px 여백 보호")
+                    _tc1, _tc2 = st.columns([1, 1])
+                    _adj_stepper(_tc1, cid, adj, "text_dx", "→ X →", 0, 100, 4)
 
-                        # ── 섹션 A: 추천 이모티콘 ──────────────────────────────
-                        st.markdown("**🎯 추천 이모티콘**")
-                        if not c.get("emoji_candidates"):
-                            c["emoji_candidates"] = fetch_emoji_candidates(kw)
-                        cands = c.get("emoji_candidates", [])
-                        sel_urls = {it["url"] for it in c["emoji_items"]}
+                st.markdown('<hr class="s">', unsafe_allow_html=True)
 
-                        if cands:
-                            per = 6
-                            for ri in range(0, min(len(cands), 12), per):
-                                chunk = cands[ri:ri+per]
-                                pcols = st.columns(len(chunk))
-                                for j, cand in enumerate(chunk):
-                                    with pcols[j]:
-                                        png = _fetch_em(cand["img_url"])
-                                        if png: st.image(png, width=44)
-                                        url = cand["img_url"]
-                                        is_sel = url in sel_urls
-                                        if st.button("✓" if is_sel else "＋", key=f"ep_{cid}_{ri+j}",
-                                                     type="primary" if is_sel else "secondary"):
-                                            if is_sel:
-                                                c["emoji_items"] = [it for it in c["emoji_items"] if it["url"]!=url]
-                                            else:
-                                                if len(c["emoji_items"]) < 3:
-                                                    c["emoji_items"].append({"url":url,"size":52,"hue":0,"rotation":0})
-                                                else:
-                                                    c["emoji_items"] = c["emoji_items"][1:]+[{"url":url,"size":52,"hue":0,"rotation":0}]
-                                            c["emoji_candidates"] = cands
-                                            st.rerun()
+                # ── 오브젝트 이동·크기·기울기 ─────────────────────────
+                st.caption("오브젝트  ·  4px / 5% / 1° 단위")
+                oa, ob, oc, od = st.columns(4)
+                _adj_stepper(oa, cid, adj, "obj_dx",       "← X →", -150, 200, 4)
+                _adj_stepper(ob, cid, adj, "obj_dy",       "↑ Y ↓",  -40,  40, 4)
+                _adj_stepper(oc, cid, adj, "obj_scale",    "크기",    70, 130, 5, "%", default=100)
+                _adj_stepper(od, cid, adj, "obj_rotation", "기울기", -30,  30, 1, "°")
 
-                        # ── 섹션 B: 전체 카탈로그 ───────────────────────────────
-                        st.markdown("**📦 전체 이모티콘**")
-                        from core.emoji import get_catalog_candidates, EMOJI_CATALOG
-                        cat_names = list(EMOJI_CATALOG.keys())
-                        sel_cat = st.selectbox("카테고리", cat_names, key=f"ecat_{cid}")
-                        cat_cands = get_catalog_candidates(sel_cat)
-                        sel_urls2 = {it["url"] for it in c["emoji_items"]}
-                        per2 = 8
-                        for ri2 in range(0, len(cat_cands), per2):
-                            chunk2 = cat_cands[ri2:ri2+per2]
-                            pcols2 = st.columns(len(chunk2))
-                            for j2, cand2 in enumerate(chunk2):
-                                with pcols2[j2]:
-                                    png2 = _fetch_em(cand2["img_url"])
-                                    if png2: st.image(png2, width=40)
-                                    url2 = cand2["img_url"]
-                                    is_sel2 = url2 in sel_urls2
-                                    if st.button("✓" if is_sel2 else "＋", key=f"ec_{cid}_{ri2+j2}",
-                                                 type="primary" if is_sel2 else "secondary"):
-                                        if is_sel2:
-                                            c["emoji_items"] = [it for it in c["emoji_items"] if it["url"]!=url2]
+                # ── 간격 경고 ─────────────────────────────────────────
+                has_warn, warn_msg = _gap_warning(fmt, adj)
+                if has_warn:
+                    st.warning(f"⚠️ {warn_msg}", icon=None)
+
+            # 위치·크기 조정 후 "적용" 버튼으로만 재생성
+            if c.get("result_png"):
+                adj_hash = hashlib.md5(json.dumps(adj, sort_keys=True).encode()).hexdigest()
+                if c.get("_adj_hash") != adj_hash:
+                    if st.button("🔄 조정 적용", key=f"apply_adj_{cid}", use_container_width=True):
+                        c["_adj_hash"] = adj_hash
+                        with st.spinner("업데이트 중…"):
+                            r = _do_gen(c, logo)
+                            if r: c["result_png"] = r
+                        st.rerun()
+
+            # preview_slot에 최종 이미지 채우기
+            if c.get("result_png"):
+                preview_slot.image(c["result_png"], use_container_width=True)
+                dl_slot.download_button(
+                    "⬇ PNG 저장", data=c["result_png"],
+                    file_name=f"{c['name'] or f'creative_{idx+1}'}.png",
+                    mime="image/png", key=f"dl_{cid}",
+                    use_container_width=True)
+            else:
+                preview_slot.markdown('<div class="ph">▶ 소재 생성을 눌러주세요</div>',
+                                      unsafe_allow_html=True)
+
+            # 이모티콘 픽커
+            if c.get("use_emoji"):
+                if "emoji_items" not in c:
+                    c["emoji_items"] = []
+
+                with st.expander("😀 이모티콘 선택 · 세부 설정"):
+                    kw = c.get("emoji_keywords","") or (c["main_copy"]+" "+c["sub_copy"])
+
+                    # ── 섹션 A: 추천 이모티콘 ──────────────────────────────
+                    st.markdown("**🎯 추천 이모티콘**")
+                    if not c.get("emoji_candidates"):
+                        c["emoji_candidates"] = fetch_emoji_candidates(kw)
+                    cands = c.get("emoji_candidates", [])
+                    sel_urls = {it["url"] for it in c["emoji_items"]}
+
+                    if cands:
+                        per = 6
+                        for ri in range(0, min(len(cands), 12), per):
+                            chunk = cands[ri:ri+per]
+                            pcols = st.columns(len(chunk))
+                            for j, cand in enumerate(chunk):
+                                with pcols[j]:
+                                    png = _fetch_em(cand["img_url"])
+                                    if png: st.image(png, width=44)
+                                    url = cand["img_url"]
+                                    is_sel = url in sel_urls
+                                    if st.button("✓" if is_sel else "＋", key=f"ep_{cid}_{ri+j}",
+                                                 type="primary" if is_sel else "secondary"):
+                                        if is_sel:
+                                            c["emoji_items"] = [it for it in c["emoji_items"] if it["url"]!=url]
                                         else:
                                             if len(c["emoji_items"]) < 3:
-                                                c["emoji_items"].append({"url":url2,"size":52,"hue":0,"rotation":0})
+                                                c["emoji_items"].append({"url":url,"size":52,"hue":0,"rotation":0})
                                             else:
-                                                c["emoji_items"] = c["emoji_items"][1:]+[{"url":url2,"size":52,"hue":0,"rotation":0}]
+                                                c["emoji_items"] = c["emoji_items"][1:]+[{"url":url,"size":52,"hue":0,"rotation":0}]
+                                        c["emoji_candidates"] = cands
                                         st.rerun()
 
-                        # ── 섹션 C: 선택된 이모티콘 개별 설정 ────────────────
-                        if c["emoji_items"]:
-                            st.markdown("**⚙️ 선택된 이모티콘 개별 설정**")
-                            for ei, item in enumerate(c["emoji_items"]):
-                                png_item = _fetch_em(item["url"])
-                                ic1, ic2, ic3, ic4, ic5 = st.columns([1, 2, 2, 2, 1])
-                                if png_item: ic1.image(png_item, width=36)
-                                item["size"]     = ic2.number_input(f"크기{ei+1}", 20, 90, item.get("size",52),   key=f"eis_{cid}_{ei}")
-                                item["rotation"] = ic3.slider(f"기울기{ei+1}°", -45, 45, item.get("rotation",0), key=f"eir_{cid}_{ei}")
-                                item["hue"]      = ic4.slider(f"색조{ei+1}°", -180, 180, item.get("hue",0),      key=f"eih_{cid}_{ei}")
-                                if ic5.button("✕", key=f"eid_{cid}_{ei}"):
-                                    c["emoji_items"].pop(ei); st.rerun()
+                    # ── 섹션 B: 전체 카탈로그 ───────────────────────────────
+                    st.markdown("**📦 전체 이모티콘**")
+                    from core.emoji import get_catalog_candidates, EMOJI_CATALOG
+                    cat_names = list(EMOJI_CATALOG.keys())
+                    sel_cat = st.selectbox("카테고리", cat_names, key=f"ecat_{cid}")
+                    cat_cands = get_catalog_candidates(sel_cat)
+                    sel_urls2 = {it["url"] for it in c["emoji_items"]}
+                    per2 = 8
+                    for ri2 in range(0, len(cat_cands), per2):
+                        chunk2 = cat_cands[ri2:ri2+per2]
+                        pcols2 = st.columns(len(chunk2))
+                        for j2, cand2 in enumerate(chunk2):
+                            with pcols2[j2]:
+                                png2 = _fetch_em(cand2["img_url"])
+                                if png2: st.image(png2, width=40)
+                                url2 = cand2["img_url"]
+                                is_sel2 = url2 in sel_urls2
+                                if st.button("✓" if is_sel2 else "＋", key=f"ec_{cid}_{ri2+j2}",
+                                             type="primary" if is_sel2 else "secondary"):
+                                    if is_sel2:
+                                        c["emoji_items"] = [it for it in c["emoji_items"] if it["url"]!=url2]
+                                    else:
+                                        if len(c["emoji_items"]) < 3:
+                                            c["emoji_items"].append({"url":url2,"size":52,"hue":0,"rotation":0})
+                                        else:
+                                            c["emoji_items"] = c["emoji_items"][1:]+[{"url":url2,"size":52,"hue":0,"rotation":0}]
+                                    st.rerun()
+
+                    # ── 섹션 C: 선택된 이모티콘 개별 설정 ────────────────
+                    if c["emoji_items"]:
+                        st.markdown("**⚙️ 선택된 이모티콘 개별 설정**")
+                        for ei, item in enumerate(c["emoji_items"]):
+                            png_item = _fetch_em(item["url"])
+                            ic1, ic2, ic3, ic4, ic5 = st.columns([1, 2, 2, 2, 1])
+                            if png_item: ic1.image(png_item, width=36)
+                            item["size"]     = ic2.number_input(f"크기{ei+1}", 20, 90, item.get("size",52),   key=f"eis_{cid}_{ei}")
+                            item["rotation"] = ic3.slider(f"기울기{ei+1}°", -45, 45, item.get("rotation",0), key=f"eir_{cid}_{ei}")
+                            item["hue"]      = ic4.slider(f"색조{ei+1}°", -180, 180, item.get("hue",0),      key=f"eih_{cid}_{ei}")
+                            if ic5.button("✕", key=f"eid_{cid}_{ei}"):
+                                c["emoji_items"].pop(ei); st.rerun()
 
 
 def _dup(cid):
