@@ -58,8 +58,12 @@ def _smart_crop(image_bytes: bytes, anthropic_key: str) -> bytes:
                         "type": "text",
                         "text": (
                             f"Image size: {w}x{h}px. "
-                            "Find the bounding box of the MAIN product (primary subject) only. "
-                            "Exclude surrounding stickers, emoji, watermarks, decorations. "
+                            "Find a bounding box that FULLY contains the main product — "
+                            "include every part of it (edges, shadows, accessories attached to it). "
+                            "Be GENEROUS, not tight. "
+                            "Only exclude elements that are clearly SEPARATE floating decorations "
+                            "(emoji, stickers, watermarks) that do NOT touch the product. "
+                            "If no such decorations exist, return the full image bounds. "
                             'Reply ONLY with JSON: {"x1":N,"y1":N,"x2":N,"y2":N}. No other text.'
                         ),
                     },
@@ -68,18 +72,20 @@ def _smart_crop(image_bytes: bytes, anthropic_key: str) -> bytes:
         )
 
         raw = msg.content[0].text.strip()
-        # JSON만 추출 (앞뒤 설명 텍스트 방어)
         start, end = raw.index("{"), raw.rindex("}") + 1
         data = json.loads(raw[start:end])
 
-        pad = 12  # bbox 여유 패딩
+        # 비율 기반 패딩: 이미지 짧은 변의 4%
+        pad = max(20, int(min(w, h) * 0.04))
         x1 = max(0, int(data["x1"]) - pad)
         y1 = max(0, int(data["y1"]) - pad)
         x2 = min(w, int(data["x2"]) + pad)
         y2 = min(h, int(data["y2"]) + pad)
 
-        # 유효한 크롭인지 확인 (너무 작으면 원본 사용)
-        if (x2 - x1) < 40 or (y2 - y1) < 40:
+        # 크롭 면적이 원본의 75% 이상이면 장식이 없는 깔끔한 상품샷 → 크롭 생략
+        crop_area = (x2 - x1) * (y2 - y1)
+        orig_area = w * h
+        if crop_area / orig_area >= 0.75 or (x2 - x1) < 40 or (y2 - y1) < 40:
             return image_bytes
 
         cropped = img.crop((x1, y1, x2, y2))
