@@ -119,23 +119,27 @@ details summary{font-size:13px!important;font-weight:600!important}
     background:#F8F6FF!important;border:1px solid #E8E0FF!important;
     border-radius:8px!important;padding:4px 2px!important}
 
-/* number_input 내부 모든 div — 세로 중앙 정렬 */
-[data-testid="stNumberInput"] div{
-    display:flex!important;align-items:center!important;flex-wrap:nowrap!important}
-[data-testid="stNumberInput"] input{flex:1!important}
-/* 버튼 부모 — 고정 너비로 stretch 차단 */
+/* number_input 래퍼 — 버튼이 잘리지 않도록 세로 여백 확보 */
+[data-testid="stNumberInput"] > div,
+[data-testid="stNumberInput"] > div > div{
+    display:flex!important;align-items:center!important;
+    flex-wrap:nowrap!important;gap:4px!important;
+    padding-top:5px!important;padding-bottom:5px!important}
+[data-testid="stNumberInput"] input{
+    flex:1!important;min-width:0!important}
+/* +/- 버튼 — 정사각형 고정, 모서리 둥근 형태 */
 [data-testid="stNumberInputStepDown"],
 [data-testid="stNumberInputStepUp"]{
-    flex:0 0 28px!important;
-    width:28px!important;height:28px!important;
-    min-width:28px!important;min-height:28px!important;
-    max-width:28px!important;max-height:28px!important;
+    flex:0 0 30px!important;
+    width:30px!important;height:30px!important;
+    min-width:30px!important;min-height:30px!important;
+    max-width:30px!important;max-height:30px!important;
     background:#3A1D96!important;
     border:none!important;border-radius:8px!important;
     padding:0!important;cursor:pointer!important;
     position:relative!important;overflow:visible!important;
-    align-self:center!important}
-[data-testid="stNumberInputStepDown"]{margin-right:4px!important}
+    align-self:center!important;flex-shrink:0!important}
+[data-testid="stNumberInputStepDown"]{margin-right:3px!important}
 /* SVG 숨기기 */
 [data-testid="stNumberInputStepDown"] svg,
 [data-testid="stNumberInputStepUp"] svg{display:none!important}
@@ -146,8 +150,8 @@ details summary{font-size:13px!important;font-weight:600!important}
 [data-testid="stNumberInputStepUp"]::after{
     display:block!important;position:absolute!important;
     top:0!important;left:0!important;right:0!important;bottom:0!important;
-    text-align:center!important;line-height:28px!important;
-    font-size:16px!important;font-weight:700!important;
+    text-align:center!important;line-height:30px!important;
+    font-size:17px!important;font-weight:700!important;
     color:#fff!important;pointer-events:none!important;font-family:sans-serif!important}
 [data-testid="stNumberInputStepDown"]::after{content:"−"!important}
 [data-testid="stNumberInputStepUp"]::after{content:"+"!important}
