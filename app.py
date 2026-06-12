@@ -486,7 +486,7 @@ def _card(idx, c, logo):
         st.divider()
 
         # ── 본문 2열: 좌(폼) / 우(미리보기+조정) ────────────────────────────
-        col_l, col_r = st.columns([10, 11], gap="large")
+        col_l, col_r = st.columns([10, 11], gap="small")
 
         # ── 좌측 폼 ─────────────────────────────────────────────────────────
         with col_l:
