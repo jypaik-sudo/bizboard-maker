@@ -641,6 +641,7 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
                 sub_copy, sub_right,
                 emphasis_text, emphasis_color, emphasis_type,
                 main_pt=effective_pt, sub_pt=_sub_size,
+                center_w=_rw if key in CENTER_FMTS else None,
             )
 
     else:
