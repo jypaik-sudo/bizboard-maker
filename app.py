@@ -194,6 +194,20 @@ GUIDE = dict(
     obj_dx_limit=160,  obj_dy_limit=80,
 )
 
+def _default_adj(fmt: str) -> dict:
+    """포맷에 따른 기본 adj — 소재 생성 클릭 시 항상 이 값으로 리셋."""
+    base = dict(
+        main_size=MAIN_PT, sub_size=SUB_PT,
+        obj_dx=0, obj_dy=0, obj_scale=100, obj_rotation=0,
+        text_dx=0, left_dx=0, right_dx=0,
+    )
+    # 우측 오브젝트 포맷: ABLY 로고(x≈878~979, y≈24~45) 침범 방지
+    # 오브젝트 박스가 넓으므로 x를 약간 좌측으로 당겨 로고 영역과 겹침 최소화
+    if fmt not in THREE_FIELD_FMTS and fmt not in ("가운데 오브젝트",):
+        base["obj_dx"] = -20   # 기본 우측 박스에서 살짝 좌이동 → 로고 영역 여백 확보
+    return base
+
+
 def _new():
     return dict(id=str(uuid.uuid4())[:8],name="",format="가운데 오브젝트",
                 main_copy="",sub_copy="",sub_right="",emphasis_text="",
@@ -213,8 +227,7 @@ if "sid" not in st.session_state:
 sid = st.session_state.sid
 
 if "creatives" not in st.session_state:
-    saved = _load(sid)
-    st.session_state.creatives = [_merge(s) for s in saved] if saved else [_new()]
+    st.session_state.creatives = [_new()]
 
 # ── 포맷 선택 ─────────────────────────────────────────────────────────────────
 def _set_fmt(cid, fmt):
@@ -402,9 +415,12 @@ def _card(idx, c, logo):
         del_clicked = hc3.button("🗑", key=f"del_{cid}", use_container_width=True)
 
         if gen_clicked:
+            # 소재 생성 시 항상 adj 초기화 → 포맷 기본 위치로 리셋
+            c["adjustments"] = _default_adj(fmt)
             with st.spinner("생성 중…"):
                 r = _do_gen(c, logo)
                 if r: c["result_png"] = r
+            st.rerun()  # adj 리셋이 스테퍼에 반영되도록
 
         if del_clicked:
             st.session_state.creatives = [x for x in st.session_state.creatives if x["id"] != cid]

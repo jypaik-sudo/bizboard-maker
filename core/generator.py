@@ -243,18 +243,19 @@ def _draw_left_zone(
     text: str, max_w: int,
     pt: int | None = None,
 ) -> None:
-    """좌측 텍스트 존 — Bold, 공백 기준 줄바꿈, 세로 가운데 정렬."""
+    """좌측 텍스트 존 — Bold 1줄 고정, 너비 초과 시 폰트 자동 축소."""
     if not text:
         return
     size = pt if pt is not None else LEFT_MAIN_PT
-    font = _font(True, size)
-    lines = _wrap_text(draw, text, font, max_w)
-    line_h = size + 6
-    total_h = len(lines) * line_h - 6
-    y = y_center - total_h // 2
-    for line in lines:
-        draw.text((x, y), line, font=font, fill=MAIN_COLOR)
-        y += line_h
+    min_size = 20
+    while size >= min_size:
+        font = _font(True, size)
+        if _text_w(draw, text, font) <= max_w:
+            break
+        size -= 1
+    font = _font(True, max(size, min_size))
+    y = y_center - size // 2
+    draw.text((x, y), text, font=font, fill=MAIN_COLOR)
 
 
 # ── layout zones per format ───────────────────────────────────────────────────
