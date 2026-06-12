@@ -120,8 +120,12 @@ details summary{font-size:13px!important;font-weight:600!important}
     border-radius:6px!important;padding:4px 2px!important}
 [data-testid="stNumberInputStepDown"],
 [data-testid="stNumberInputStepUp"]{
-    background:#F0EAFF!important;border-color:#D8CCFF!important;
-    color:#3A1D96!important;font-weight:700!important}
+    background:#3A1D96!important;border-color:#3A1D96!important;
+    color:#fff!important;font-weight:900!important;
+    min-width:28px!important;border-radius:4px!important}
+[data-testid="stNumberInputStepDown"]:hover,
+[data-testid="stNumberInputStepUp"]:hover{
+    background:#5533CC!important;border-color:#5533CC!important}
 </style>
 """, unsafe_allow_html=True)
 
@@ -551,15 +555,26 @@ def _card(idx, c, logo):
 
                     # ── 폰트 크기 (39~51 pt) ─────────────────────────────
                     if fmt in THREE_FIELD_FMTS:
-                        st.caption("카피 폰트  39~51 pt  ·  메인(좌·우) 항상 동일")
-                        _, fc, _ = st.columns([2, 1, 2])
-                        ms_new = fc.number_input(
-                            "pt", min_value=39, max_value=51,
+                        st.caption("카피 폰트 (pt)  ·  메인(좌·우) 항상 동일 / 서브 별도")
+                        fa, fb = st.columns(2)
+                        ms_new = fa.number_input(
+                            "메인카피 39~51 (pt)", min_value=39, max_value=51,
                             value=max(39, min(51, adj.get("main_size", MAIN_PT))),
                             step=1, key=f"ni_ms_{cid}", format="%d",
                         )
                         adj["main_size"] = int(ms_new)
-                        adj["sub_size"]  = int(ms_new)   # 강제 동기화
+                        # 서브카피 독립 설정 (초기값: SUB_PT, main_size와 무관)
+                        _ss_init = adj.get("sub_size", SUB_PT)
+                        # 처음 렌더 시 sub_size가 main_size와 같으면(강제동기화 잔재) SUB_PT로 리셋
+                        if _ss_init == adj["main_size"] and "sub_size_set" not in adj:
+                            _ss_init = SUB_PT
+                        ss_new = fb.number_input(
+                            "서브카피 24~51 (pt)", min_value=24, max_value=51,
+                            value=max(24, min(51, _ss_init)),
+                            step=1, key=f"ni_ss_{cid}", format="%d",
+                        )
+                        adj["sub_size"] = int(ss_new)
+                        adj["sub_size_set"] = True   # 사용자가 독립 설정했음을 표시
                     else:
                         st.caption("폰트 크기  39~51 pt")
                         fa, fb = st.columns(2)
