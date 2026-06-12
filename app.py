@@ -121,8 +121,18 @@ details summary{font-size:13px!important;font-weight:600!important}
 [data-testid="stNumberInputStepDown"],
 [data-testid="stNumberInputStepUp"]{
     background:#3A1D96!important;border-color:#3A1D96!important;
-    color:#fff!important;font-weight:900!important;
-    min-width:28px!important;border-radius:4px!important}
+    min-width:32px!important;border-radius:4px!important;
+    position:relative!important;overflow:hidden!important}
+[data-testid="stNumberInputStepDown"] svg,
+[data-testid="stNumberInputStepUp"] svg{display:none!important}
+[data-testid="stNumberInputStepDown"]::after{
+    content:"−";color:#fff!important;font-size:18px!important;
+    font-weight:900!important;line-height:1!important;
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)}
+[data-testid="stNumberInputStepUp"]::after{
+    content:"+";color:#fff!important;font-size:18px!important;
+    font-weight:900!important;line-height:1!important;
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)}
 [data-testid="stNumberInputStepDown"]:hover,
 [data-testid="stNumberInputStepUp"]:hover{
     background:#5533CC!important;border-color:#5533CC!important}
