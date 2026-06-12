@@ -794,35 +794,31 @@ import streamlit.components.v1 as _cmp
 _cmp.html("""
 <script>
 (function(){
+  var BTN='background:#3A1D96;border:none;border-radius:6px;'
+         +'width:36px;height:36px;padding:0;cursor:pointer;'
+         +'display:flex;align-items:center;justify-content:center;flex-shrink:0;';
+  var TXT='color:#fff;font-size:22px;font-weight:900;'
+         +'line-height:1;display:flex;align-items:center;justify-content:center;'
+         +'width:100%;height:100%;pointer-events:none;margin:0;padding:0;';
   function patch(){
     var doc=window.parent.document;
-    doc.querySelectorAll('[data-testid="stNumberInputStepDown"]').forEach(function(b){
-      if(b.dataset.patched)return;
-      b.dataset.patched='1';
-      b.style.cssText='background:#3A1D96!important;border-color:#3A1D96!important;'
-        +'display:flex!important;align-items:center!important;justify-content:center!important;'
-        +'border-radius:6px!important;min-width:36px!important;min-height:36px!important;';
-      Array.from(b.children).forEach(function(c){c.style.display='none';});
-      var s=document.createElement('span');
-      s.textContent='−';
-      s.style.cssText='color:white;font-size:22px;font-weight:900;line-height:1;pointer-events:none;display:block';
-      b.appendChild(s);
+    doc.querySelectorAll('[data-testid="stNumberInputStepDown"]:not([data-p])').forEach(function(b){
+      b.setAttribute('data-p','1');
+      b.setAttribute('style',BTN);
+      b.innerHTML='<b style="'+TXT+'">&#8722;</b>';
     });
-    doc.querySelectorAll('[data-testid="stNumberInputStepUp"]').forEach(function(b){
-      if(b.dataset.patched)return;
-      b.dataset.patched='1';
-      b.style.cssText='background:#3A1D96!important;border-color:#3A1D96!important;'
-        +'display:flex!important;align-items:center!important;justify-content:center!important;'
-        +'border-radius:6px!important;min-width:36px!important;min-height:36px!important;';
-      Array.from(b.children).forEach(function(c){c.style.display='none';});
-      var s=document.createElement('span');
-      s.textContent='+';
-      s.style.cssText='color:white;font-size:22px;font-weight:900;line-height:1;pointer-events:none;display:block';
-      b.appendChild(s);
+    doc.querySelectorAll('[data-testid="stNumberInputStepUp"]:not([data-p])').forEach(function(b){
+      b.setAttribute('data-p','1');
+      b.setAttribute('style',BTN);
+      b.innerHTML='<b style="'+TXT+'">&#43;</b>';
     });
   }
   patch();
-  new MutationObserver(patch).observe(window.parent.document.body,{subtree:true,childList:true});
+  new MutationObserver(function(){
+    doc2=window.parent.document;
+    doc2.querySelectorAll('[data-testid="stNumberInputStepDown"][data-p],[data-testid="stNumberInputStepUp"][data-p]').forEach(function(b){b.removeAttribute('data-p');});
+    patch();
+  }).observe(window.parent.document.body,{subtree:true,childList:true});
 })();
 </script>
 """, height=0)
