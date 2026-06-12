@@ -237,6 +237,16 @@ def _draw_text_block(
             draw.text((x, sub_y), sub_copy, font=f_sub, fill=SUB_COLOR)
 
 
+def _fit_pt(draw: ImageDraw.ImageDraw, text: str, max_w: int, pt: int, min_pt: int = 20) -> int:
+    """text가 max_w 안에 들어오는 최대 폰트 크기 (Bold 기준) 반환."""
+    size = pt
+    while size >= min_pt:
+        if _text_w(draw, text, _font(True, size)) <= max_w:
+            return size
+        size -= 1
+    return min_pt
+
+
 def _draw_left_zone(
     draw: ImageDraw.ImageDraw,
     x: int, y_center: int,
@@ -247,13 +257,8 @@ def _draw_left_zone(
     if not text:
         return
     size = pt if pt is not None else LEFT_MAIN_PT
-    min_size = 20
-    while size >= min_size:
-        font = _font(True, size)
-        if _text_w(draw, text, font) <= max_w:
-            break
-        size -= 1
-    font = _font(True, max(size, min_size))
+    size = _fit_pt(draw, text, max_w, size)
+    font = _font(True, size)
     y = y_center - size // 2
     draw.text((x, y), text, font=font, fill=MAIN_COLOR)
 
@@ -282,16 +287,29 @@ LOGO_RIGHT_FMTS = {"로고 우측+텍스트", "로고 우측+뱃지"}
 
 ZONES = {
     # (obj_box, left_text_x|None, left_max_w, right_text_x|None, right_max_w)
-    "가운데 오브젝트":    ((180, 5,  535, 253), 20,   150, 555, 445),
-    "텍스트강조":         ((650, 10, 1010, 248), 55,  560, None, 0),
-    "할인율뱃지":         ((650, 10, 1010, 248), 55,  560, None, 0),
-    "서브텍스트강조":     ((650, 10, 1010, 248), 55,  560, None, 0),
-    "믹스 텍스트강조":    ((180, 5,  535, 253), 20,   150, 555, 445),
-    "믹스 할인율뱃지":    ((180, 5,  535, 253), 20,   150, 555, 445),
-    "로고 가운데+텍스트": ((180, 5,  535, 253), None, 0,   555, 445),
-    "로고 가운데+뱃지":   ((180, 5,  535, 253), None, 0,   555, 445),
-    "로고 우측+텍스트":   ((440, 5,  730, 253), 20,   400, None, 0),
-    "로고 우측+뱃지":     ((440, 5,  730, 253), 20,   400, None, 0),
+    #
+    # CENTER 계열: 오브젝트 캔버스 중앙 정렬 (center=515)
+    # 좌우 text_x·max_w는 33px gap 보장
+    #   left:  x=48,  max_w=284 → text 끝=332, obj_left=365, gap=33px ✓
+    #   right: x=698, max_w=283 → 698+283=981, 우측 여백=48px ✓
+    "가운데 오브젝트":    ((365, 5,  665, 253), 48,  284, 698, 283),
+    "믹스 텍스트강조":    ((365, 5,  665, 253), 48,  284, 698, 283),
+    "믹스 할인율뱃지":    ((365, 5,  665, 253), 48,  284, 698, 283),
+    # 로고 가운데: 브랜드 로고(5-175) + 오브젝트(210-510) + 우측 카피(543-)
+    #   logo right=175, obj_left=210 → gap=35px ✓
+    #   obj_right=510, right_x=543 → gap=33px ✓
+    "로고 가운데+텍스트": ((210, 5,  510, 253), None, 0,   543, 438),
+    "로고 가운데+뱃지":   ((210, 5,  510, 253), None, 0,   543, 438),
+
+    # 우측 오브젝트 계열: 텍스트 좌측(x=48), 오브젝트 우측
+    #   obj_left=650, text_x=48, 여유공간 충분
+    "텍스트강조":         ((650, 10, 980, 248), 48,  560, None, 0),
+    "할인율뱃지":         ((650, 10, 980, 248), 48,  560, None, 0),
+    "서브텍스트강조":     ((650, 10, 980, 248), 48,  560, None, 0),
+
+    # 로고 우측: 브랜드 로고(5-430 상단) + 오브젝트(440-730) + 카피 하단좌
+    "로고 우측+텍스트":   ((440, 5,  730, 253), 20,  400, None, 0),
+    "로고 우측+뱃지":     ((440, 5,  730, 253), 20,  400, None, 0),
 }
 
 # 브랜드 로고 이미지 배치 존 (LOGO_FMTS 전용)
@@ -454,16 +472,23 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
             )
 
     elif key in CENTER_FMTS:
-        # 좌측 존: 메인카피(좌) 텍스트 — 로고 가운데는 None이므로 스킵
+        # 좌측 필요 크기 계산 → 좌·우 동기화 (메인카피 좌·우 항상 같은 크기)
+        effective_pt = _main_size
         if text_x is not None and main_copy:
-            _draw_left_zone(draw, text_x + _left_dx, CANVAS_H // 2, main_copy, _lw, pt=_main_size)
-        # 우측 존: 메인카피(우) + 서브카피
+            effective_pt = _fit_pt(draw, main_copy, _lw, _main_size)
+        # 우측 필요 크기도 체크해서 더 작은 쪽을 기준으로
+        if right_x and sub_copy and _rw > 0:
+            right_pt = _fit_pt(draw, sub_copy, _rw, _main_size)
+            effective_pt = min(effective_pt, right_pt)
+
+        if text_x is not None and main_copy:
+            _draw_left_zone(draw, text_x + _left_dx, CANVAS_H // 2, main_copy, _lw, pt=effective_pt)
         if right_x and (sub_copy or sub_right):
             _draw_text_block(
                 draw, right_x + _right_dx, CANVAS_H // 2,
                 sub_copy, sub_right,
                 emphasis_text, emphasis_color, emphasis_type,
-                main_pt=_main_size, sub_pt=_sub_size,
+                main_pt=effective_pt, sub_pt=_sub_size,
             )
 
     else:
