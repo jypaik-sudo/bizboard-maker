@@ -71,7 +71,7 @@ div[data-testid="stHorizontalBlock"]:has([data-testid="stTextInput"]) > div:nth-
 }
 
 /* ── 섹션 라벨 ── */
-.sec{font-size:11px;font-weight:800;color:#3A1D96;letter-spacing:.04em;margin:12px 0 4px;display:block}
+.sec{font-size:14px;font-weight:800;color:#3A1D96;letter-spacing:.04em;margin:12px 0 4px;display:block}
 hr.s{border:none;border-top:1px solid #EEEEEE!important;margin:10px 0!important}
 
 /* ── 좌측 패널 배경 ── */
@@ -292,7 +292,7 @@ def _fmt_selector(cid, current):
         if gi > 0:
             st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
         st.markdown(
-            f"<div style='font-size:10px;font-weight:800;color:#BBBBBB;"
+            f"<div style='font-size:13px;font-weight:800;color:#BBBBBB;"
             f"text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px'>{group}</div>",
             unsafe_allow_html=True)
         cols = st.columns(4, gap="small")  # CSS로 추가 축소
