@@ -329,6 +329,9 @@ def _do_gen(c, logo):
             chosen = ([cd for cd in cands if cd["img_url"] in sel] if sel
                       else pick_emoji_with_claude(cands,c["main_copy"],c["sub_copy"],ANTHROPIC_KEY))
             emoji_images = [b for e in chosen if (b := fetch_emoji_png(e.get("img_url","")))]
+        prod_imgs = c.get("product_images") or []
+        if not prod_imgs:
+            st.warning("⚠️ 상품 이미지가 없습니다. 오브젝트 없이 생성합니다.")
         return generate_png({
             "format":        c["format"],
             "main_copy":     c["main_copy"],
@@ -337,14 +340,15 @@ def _do_gen(c, logo):
             "emphasis_text": c["emphasis_text"],
             "emphasis_color":c["emphasis_color"],
             "emphasis_type": EMPHASIS_TYPE.get(c["format"],"none"),
-            "product_images":c["product_images"],
+            "product_images":prod_imgs,
             "brand_logo":    c.get("brand_logo"),
             "emoji_images":  emoji_images,
             "emoji_items":   final_emoji_items,
             "adjustments":   c.get("adjustments",{}),
         }, logo)
     except Exception as e:
-        st.error(str(e)); return None
+        import traceback
+        st.error(f"생성 오류: {e}\n{traceback.format_exc()}"); return None
 
 def _warn_guide(adj):
     pass  # 화살표 버튼이 하드 min/max 로 제한 → 경고 불필요
