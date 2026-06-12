@@ -64,18 +64,21 @@ def _paste_logo(canvas: Image.Image, logo_bytes: bytes) -> None:
 def _paste_brand(canvas: Image.Image, brand_bytes: bytes, x: int, logo_h: int,
                   max_w: int | None = None) -> int:
     """브랜드 로고를 x 위치, 세로 중앙에 배치.
-    logo_h: 목표 높이(px). max_w: 최대 허용 너비(오브젝트 여백 보호).
-    너비가 max_w를 초과하면 비율 유지하며 높이도 같이 축소.
+    logo_h: 목표 높이(px)로 항상 고정. max_w: 최대 허용 너비(오브젝트 여백 보호).
+    너비가 max_w를 초과하면 높이는 유지한 채 너비만 max_w로 클램프(가로 크롭).
     반환값: 실제 로고 너비(px).
     """
     img = Image.open(io.BytesIO(brand_bytes)).convert("RGBA")
     natural_w = max(1, int(logo_h * img.width / img.height))
     actual_h = logo_h
     actual_w = natural_w
-    if max_w and natural_w > max_w:
-        actual_w = max_w
-        actual_h = max(1, int(logo_h * max_w / natural_w))
+    # 높이 고정 리사이즈 먼저
     img = img.resize((actual_w, actual_h), Image.LANCZOS)
+    # 너비가 max_w 초과 시 중앙 크롭 (높이 유지)
+    if max_w and actual_w > max_w:
+        crop_x = (actual_w - max_w) // 2
+        img = img.crop((crop_x, 0, crop_x + max_w, actual_h))
+        actual_w = max_w
     y = (CANVAS_H - actual_h) // 2
     canvas.paste(img, (x, y), img.split()[3])
     return actual_w
@@ -318,11 +321,11 @@ ZONES = {
     "가운데 오브젝트":    ((365, 5,  665, 253), 48,  284, 698, 283),
     "믹스 텍스트강조":    ((365, 5,  665, 253), 48,  284, 698, 283),
     "믹스 할인율뱃지":    ((365, 5,  665, 253), 48,  284, 698, 283),
-    # 로고 가운데: 브랜드 로고(5-175) + 오브젝트(210-510) + 우측 카피(543-)
-    #   logo right=175, obj_left=210 → gap=35px ✓
-    #   obj_right=510, right_x=543 → gap=33px ✓
-    "로고 가운데+텍스트": ((210, 5,  510, 253), None, 0,   543, 438),
-    "로고 가운데+뱃지":   ((210, 5,  510, 253), None, 0,   543, 438),
+    # 로고 가운데: 브랜드 로고(x=48, max_w=284) + 오브젝트(캔버스 중앙) + 우측 카피(698-)
+    #   logo_right ≤ 332, obj_left=365 → gap≥33px ✓
+    #   obj_right=665, right_x=698 → gap=33px ✓
+    "로고 가운데+텍스트": ((365, 5,  665, 253), None, 0,   698, 283),
+    "로고 가운데+뱃지":   ((365, 5,  665, 253), None, 0,   698, 283),
 
     # 우측 오브젝트 계열: 텍스트 좌측(x=48), 오브젝트 우측
     #   obj_left=650, text_x=48, 여유공간 충분
