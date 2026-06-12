@@ -241,13 +241,15 @@ def _draw_left_zone(
     draw: ImageDraw.ImageDraw,
     x: int, y_center: int,
     text: str, max_w: int,
+    pt: int | None = None,
 ) -> None:
-    """좌측 텍스트 존 — LEFT_MAIN_PT Bold, 공백 기준 줄바꿈, 세로 가운데 정렬."""
+    """좌측 텍스트 존 — Bold, 공백 기준 줄바꿈, 세로 가운데 정렬."""
     if not text:
         return
-    font = _font(True, LEFT_MAIN_PT)
+    size = pt if pt is not None else LEFT_MAIN_PT
+    font = _font(True, size)
     lines = _wrap_text(draw, text, font, max_w)
-    line_h = LEFT_MAIN_PT + 6
+    line_h = size + 6
     total_h = len(lines) * line_h - 6
     y = y_center - total_h // 2
     for line in lines:
@@ -442,7 +444,7 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
     elif key in CENTER_FMTS:
         # 좌측 존: 메인카피(좌) 텍스트 — 로고 가운데는 None이므로 스킵
         if text_x is not None and main_copy:
-            _draw_left_zone(draw, text_x, CANVAS_H // 2, main_copy, _lw)
+            _draw_left_zone(draw, text_x, CANVAS_H // 2, main_copy, _lw, pt=_main_size)
         # 우측 존: 메인카피(우) + 서브카피
         if right_x and (sub_copy or sub_right):
             _draw_text_block(
