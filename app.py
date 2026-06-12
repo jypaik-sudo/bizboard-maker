@@ -126,9 +126,9 @@ details summary{font-size:13px!important;font-weight:600!important}
 /* +/- 버튼 — 모서리 둥근 정사각형, 흰색 기호 */
 [data-testid="stNumberInputStepDown"],
 [data-testid="stNumberInputStepUp"]{
-    width:32px!important;height:32px!important;
-    min-width:32px!important;min-height:32px!important;
-    max-width:32px!important;max-height:32px!important;
+    width:26px!important;height:26px!important;
+    min-width:26px!important;min-height:26px!important;
+    max-width:26px!important;max-height:26px!important;
     background:#3A1D96!important;
     border:none!important;border-radius:8px!important;
     padding:0!important;cursor:pointer!important;
@@ -148,8 +148,8 @@ details summary{font-size:13px!important;font-weight:600!important}
     display:block!important;
     position:absolute!important;
     top:0!important;left:0!important;right:0!important;bottom:0!important;
-    text-align:center!important;line-height:32px!important;
-    font-size:19px!important;font-weight:700!important;
+    text-align:center!important;line-height:26px!important;
+    font-size:15px!important;font-weight:700!important;
     color:#ffffff!important;pointer-events:none!important;
     font-family:sans-serif!important}
 [data-testid="stNumberInputStepDown"]::after{content:"−"!important}
