@@ -58,8 +58,20 @@ div[data-testid="column"] button[kind="primary"]{
     background:#3A1D96!important;border-color:#3A1D96!important;
     color:white!important;font-weight:700!important}
 
-/* ── 소재명 input / 소재생성 버튼 높이 맞춤 ── */
-[data-testid="stTextInput"] input{height:42px!important;font-size:14px!important}
+/* ── 텍스트 입력란 ── */
+[data-testid="stTextInput"] input{
+    height:42px!important;font-size:14px!important;
+    background:#fff!important;
+    border:1.5px solid #C8BEF0!important;
+    border-radius:8px!important;
+    color:#1a1a1a!important;
+    padding:0 12px!important;
+}
+[data-testid="stTextInput"] input:focus{
+    border-color:#3A1D96!important;
+    box-shadow:0 0 0 3px rgba(58,29,150,.12)!important;
+}
+[data-testid="stTextInput"] input::placeholder{color:#C0B8D8!important}
 [data-testid="stTextInput"] label{font-size:11px!important;color:#888!important;margin-bottom:2px!important}
 
 /* 소재명 행 버튼들 높이 고정 — text input이 있는 행에만 적용 (포맷 선택 행 제외) */
