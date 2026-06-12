@@ -477,23 +477,25 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
     _logo_y_center = (CANVAS_H - _logo_size) // 2
 
     if key in LOGO_RIGHT_FMTS:
-        # 브랜드 로고 → 좌측 x=48, logo+서브 블록 y (메인카피 대체)
+        # 브랜드 로고 → 좌측 x=48+text_dx (메인카피 대체, text_dx로 이동)
         _logo_y = _logo_y_right
+        _logo_x = 48 + _text_dx
         if brand_logo:
             obj_left = obj_box[0] if obj_box else CANVAS_W
-            _logo_max_w = max(1, obj_left - 48 - _MIN_GAP)
-            _paste_brand(canvas, brand_logo, 48, _logo_size, y=_logo_y, max_w=_logo_max_w)
+            _logo_max_w = max(1, obj_left - _logo_x - _MIN_GAP)
+            _paste_brand(canvas, brand_logo, _logo_x, _logo_size, y=_logo_y, max_w=_logo_max_w)
         # 상품 → 우측 존
         if obj_box and product_images:
             _paste(canvas, product_images[0], obj_box, rotation=_obj_rot)
 
     elif key in LOGO_FMTS:
-        # 브랜드 로고 → 좌측 x=48, 캔버스 세로 중앙 (서브카피는 우측 존에 별도 배치)
+        # 브랜드 로고 → 좌측 x=48+left_dx (메인카피(좌) 역할, left_dx로 이동)
         _logo_y = _logo_y_center
+        _logo_x = 48 + _left_dx
         if brand_logo:
             obj_left = obj_box[0] if obj_box else CANVAS_W
-            _logo_max_w = max(1, obj_left - 48 - _MIN_GAP)
-            _paste_brand(canvas, brand_logo, 48, _logo_size, y=_logo_y, max_w=_logo_max_w)
+            _logo_max_w = max(1, obj_left - _logo_x - _MIN_GAP)
+            _paste_brand(canvas, brand_logo, _logo_x, _logo_size, y=_logo_y, max_w=_logo_max_w)
         # 상품 → 가운데 존
         if obj_box and product_images:
             _paste(canvas, product_images[0], obj_box, rotation=_obj_rot)
