@@ -106,7 +106,7 @@ details summary{font-size:13px!important;font-weight:600!important}
     overflow:hidden!important;box-sizing:border-box!important}
 [data-testid="stFileUploaderDropzoneInstructions"]{font-size:12px!important}
 [data-testid="stFileUploader"]{min-height:130px!important;margin-top:6px!important;margin-bottom:6px!important}
-[data-testid="stFileUploader"] label{font-size:12px!important;margin-bottom:6px!important;display:block!important}
+[data-testid="stFileUploader"] label{font-size:12px!important;margin-bottom:4px!important;color:#555!important}
 
 /* ── number_input 스타일 ── */
 [data-testid="stNumberInput"] label{
@@ -410,6 +410,12 @@ def _gap_warning(fmt, adj):
             if gap < MIN:
                 return True, f"텍스트↔오브젝트 간격 {gap}px — 최소 {MIN}px 필요"
 
+    # 캔버스 좌·우측 여백 48px
+    if obj_left < 48:
+        return True, f"오브젝트 좌측 여백 {obj_left}px — 최소 48px 필요"
+    if obj_right > 981:
+        return True, f"오브젝트 우측 여백 {1029 - obj_right}px — 최소 48px 필요"
+
     return False, ""
 
 # ── 카드 렌더 ─────────────────────────────────────────────────────────────────
@@ -512,16 +518,13 @@ def _card(idx, c, logo):
 
                 ci1, ci2 = st.columns(2)
                 with ci1:
-                    st.caption("레퍼런스 (선택)")
-                    rf = st.file_uploader("ref", type=["png","jpg","jpeg","webp"],
-                                           key=f"ref_{cid}", label_visibility="collapsed")
+                    rf = st.file_uploader("레퍼런스 (선택)", type=["png","jpg","jpeg","webp"],
+                                           key=f"ref_{cid}")
                     if rf: c["reference_image"] = rf.getvalue()
                 with ci2:
-                    st.caption("상품 이미지 ✱  1~3장 · 자동 누끼")
                     prods = st.file_uploader(
-                        "prod", type=["png","jpg","jpeg","webp"],
-                        accept_multiple_files=True, key=f"prod_{cid}",
-                        label_visibility="collapsed")
+                        "상품 이미지 ✱  1~3장 · 자동 누끼", type=["png","jpg","jpeg","webp"],
+                        accept_multiple_files=True, key=f"prod_{cid}")
                     if prods:
                         raws = [f.getvalue() for f in prods[:3]]
                         hs = [hashlib.md5(b).hexdigest() for b in raws]
@@ -785,3 +788,41 @@ if done:
         file_name="bizboard.zip", mime="application/zip", use_container_width=True)
 
 _save(sid)
+
+# ── number_input +/- 버튼 JS 패치 ───────────────────────────────────────────
+import streamlit.components.v1 as _cmp
+_cmp.html("""
+<script>
+(function(){
+  function patch(){
+    var doc=window.parent.document;
+    doc.querySelectorAll('[data-testid="stNumberInputStepDown"]').forEach(function(b){
+      if(b.dataset.patched)return;
+      b.dataset.patched='1';
+      b.style.cssText='background:#3A1D96!important;border-color:#3A1D96!important;'
+        +'display:flex!important;align-items:center!important;justify-content:center!important;'
+        +'border-radius:6px!important;min-width:36px!important;min-height:36px!important;';
+      Array.from(b.children).forEach(function(c){c.style.display='none';});
+      var s=document.createElement('span');
+      s.textContent='−';
+      s.style.cssText='color:white;font-size:22px;font-weight:900;line-height:1;pointer-events:none;display:block';
+      b.appendChild(s);
+    });
+    doc.querySelectorAll('[data-testid="stNumberInputStepUp"]').forEach(function(b){
+      if(b.dataset.patched)return;
+      b.dataset.patched='1';
+      b.style.cssText='background:#3A1D96!important;border-color:#3A1D96!important;'
+        +'display:flex!important;align-items:center!important;justify-content:center!important;'
+        +'border-radius:6px!important;min-width:36px!important;min-height:36px!important;';
+      Array.from(b.children).forEach(function(c){c.style.display='none';});
+      var s=document.createElement('span');
+      s.textContent='+';
+      s.style.cssText='color:white;font-size:22px;font-weight:900;line-height:1;pointer-events:none;display:block';
+      b.appendChild(s);
+    });
+  }
+  patch();
+  new MutationObserver(patch).observe(window.parent.document.body,{subtree:true,childList:true});
+})();
+</script>
+""", height=0)
