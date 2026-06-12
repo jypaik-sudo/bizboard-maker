@@ -705,7 +705,7 @@ def _card(idx, c, logo):
                     # ── 오브젝트 이동·크기·기울기 ─────────────────────────
                     st.caption("오브젝트  ·  4px / 5% / 1° 단위")
                     oa, ob, oc, od = st.columns(4)
-                    _adj_stepper(oa, cid, adj, "obj_dx",       "← X →", -150,  80, 4)
+                    _adj_stepper(oa, cid, adj, "obj_dx",       "← X →", -150, 200, 4)
                     _adj_stepper(ob, cid, adj, "obj_dy",       "↑ Y ↓",  -40,  40, 4)
                     _adj_stepper(oc, cid, adj, "obj_scale",    "크기",    70, 130, 5, "%", default=100)
                     _adj_stepper(od, cid, adj, "obj_rotation", "기울기", -30,  30, 1, "°")

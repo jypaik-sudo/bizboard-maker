@@ -267,7 +267,11 @@ def _draw_text_block(
 
     has_sub = bool(sub_copy) or (emphasis_type != "none" and emphasis_text)
     _sub_h  = BADGE_H if (emphasis_type == "badge" and emphasis_text) else _sub_pt
-    total_h = _main_pt + (GAP + _sub_h if has_sub else 0)
+    has_main = bool(main_copy)
+    # main_copy 없으면 그 높이를 블록에서 제외 → 서브카피만 있을 때 간격 정확
+    total_h = ((_main_pt + GAP) if has_main else 0) + (_sub_h if has_sub else 0)
+    if not has_main and not has_sub:
+        return
     y = y_center - total_h // 2
 
     def _cx(text: str, font) -> int:
@@ -277,13 +281,13 @@ def _draw_text_block(
         tw = _text_w(draw, text, font)
         return x + max(0, (center_w - tw) // 2)
 
-    if main_copy:
+    if has_main:
         draw.text((_cx(main_copy, f_main), y), main_copy, font=f_main, fill=MAIN_COLOR)
 
     if not has_sub:
         return
 
-    sub_y = y + _main_pt + GAP
+    sub_y = y + ((_main_pt + GAP) if has_main else 0)
 
     if emphasis_type == "badge" and emphasis_text:
         remaining = sub_copy.replace(emphasis_text, "", 1).strip(" ,·") if sub_copy else ""
@@ -560,11 +564,12 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
     # 3. 텍스트 블록
     # _logo_y, _logo_block_h 은 위쪽 이미지 배치 블록에서 이미 계산됨
     if key in LOGO_RIGHT_FMTS:
-        # 로고가 메인카피 대체 → 서브카피만 로고 아래에 배치
+        # 로고가 메인카피 대체 → 서브카피만 로고 아래 20px 간격으로 배치
         logo_bottom = _logo_y + _logo_size + GAP
         if sub_copy:
+            _sub_h = BADGE_H if (emphasis_type == "badge" and emphasis_text) else _sub_size
             _draw_text_block(
-                draw, 48 + _text_dx, logo_bottom + _sub_size // 2,
+                draw, 48 + _text_dx, logo_bottom + _sub_h // 2,
                 "", sub_copy,
                 emphasis_text, emphasis_color, emphasis_type,
                 main_pt=_main_size, sub_pt=_sub_size,
