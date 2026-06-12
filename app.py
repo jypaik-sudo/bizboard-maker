@@ -122,20 +122,25 @@ details summary{font-size:13px!important;font-weight:600!important}
 [data-testid="stNumberInputStepUp"]{
     background:#3A1D96!important;border-color:#3A1D96!important;
     min-width:36px!important;min-height:36px!important;
-    border-radius:6px!important;
-    display:flex!important;align-items:center!important;justify-content:center!important;
-    overflow:hidden!important}
-[data-testid="stNumberInputStepDown"] svg,
-[data-testid="stNumberInputStepUp"] svg{display:none!important}
-[data-testid="stNumberInputStepDown"]::after{
-    content:"−";color:#fff;font-size:22px;font-weight:900;line-height:1;
-    pointer-events:none;display:block}
+    border-radius:6px!important;position:relative!important;
+    display:flex!important;align-items:center!important;justify-content:center!important}
+[data-testid="stNumberInputStepDown"] *,
+[data-testid="stNumberInputStepUp"] *{visibility:hidden!important}
+[data-testid="stNumberInputStepDown"]::after,
 [data-testid="stNumberInputStepUp"]::after{
-    content:"+";color:#fff;font-size:22px;font-weight:900;line-height:1;
-    pointer-events:none;display:block}
+    position:absolute!important;top:50%!important;left:50%!important;
+    transform:translate(-50%,-50%)!important;
+    font-size:20px!important;font-weight:900!important;color:#fff!important;
+    line-height:1!important;pointer-events:none!important}
+[data-testid="stNumberInputStepDown"]::after{content:"−"!important}
+[data-testid="stNumberInputStepUp"]::after{content:"+"!important}
 [data-testid="stNumberInputStepDown"]:hover,
 [data-testid="stNumberInputStepUp"]:hover{
     background:#5533CC!important;border-color:#5533CC!important}
+
+/* ── 포맷 버튼 그룹 간격 축소 ── */
+[data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"] > [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlockBorderWrapper"] button){
+    gap:6px!important}
 </style>
 """, unsafe_allow_html=True)
 
@@ -266,7 +271,7 @@ def _fmt_selector(cid, current):
             f"<div style='font-size:10px;font-weight:800;color:#BBBBBB;"
             f"text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px'>{group}</div>",
             unsafe_allow_html=True)
-        cols = st.columns(4, gap="small")
+        cols = st.columns(4, gap="small")  # CSS로 추가 축소
         for i, fmt in enumerate(fmts):
             cols[i].button(
                 FMT_LABELS.get(fmt, fmt),
@@ -582,8 +587,8 @@ def _card(idx, c, logo):
                         if _ss_init == adj["main_size"] and "sub_size_set" not in adj:
                             _ss_init = SUB_PT
                         ss_new = fb.number_input(
-                            "서브카피 24~51 (pt)", min_value=24, max_value=51,
-                            value=max(24, min(51, _ss_init)),
+                            "서브카피 39~51 (pt)", min_value=39, max_value=51,
+                            value=max(39, min(51, _ss_init)),
                             step=1, key=f"ni_ss_{cid}", format="%d",
                         )
                         adj["sub_size"] = int(ss_new)
