@@ -117,26 +117,41 @@ details summary{font-size:13px!important;font-weight:600!important}
     text-align:center!important;font-size:13px!important;
     font-weight:700!important;color:#3A1D96!important;
     background:#F8F6FF!important;border:1px solid #E8E0FF!important;
-    border-radius:6px!important;padding:4px 2px!important}
+    border-radius:8px!important;padding:4px 2px!important}
+
+/* +/- 버튼 — 모서리 둥근 정사각형, 흰색 기호 */
 [data-testid="stNumberInputStepDown"],
 [data-testid="stNumberInputStepUp"]{
-    background:#3A1D96!important;border-color:#3A1D96!important;
-    min-width:36px!important;min-height:36px!important;
-    border-radius:6px!important;position:relative!important;
-    display:flex!important;align-items:center!important;justify-content:center!important}
-[data-testid="stNumberInputStepDown"] *,
-[data-testid="stNumberInputStepUp"] *{visibility:hidden!important}
+    width:34px!important;height:34px!important;
+    min-width:34px!important;min-height:34px!important;
+    max-width:34px!important;max-height:34px!important;
+    background:#3A1D96!important;
+    border:none!important;border-radius:8px!important;
+    padding:0!important;cursor:pointer!important;
+    position:relative!important;overflow:visible!important;
+    flex-shrink:0!important}
+/* SVG 아이콘 숨기기 */
+[data-testid="stNumberInputStepDown"] svg,
+[data-testid="stNumberInputStepUp"] svg{
+    display:none!important}
+/* 흰색 +/- 기호 — pseudo-element로 삽입 */
+[data-testid="stNumberInputStepDown"]::before,
+[data-testid="stNumberInputStepUp"]::before{
+    content:""!important}
 [data-testid="stNumberInputStepDown"]::after,
 [data-testid="stNumberInputStepUp"]::after{
-    position:absolute!important;top:50%!important;left:50%!important;
-    transform:translate(-50%,-50%)!important;
-    font-size:20px!important;font-weight:900!important;color:#fff!important;
-    line-height:1!important;pointer-events:none!important}
+    display:block!important;
+    position:absolute!important;
+    top:0!important;left:0!important;right:0!important;bottom:0!important;
+    text-align:center!important;line-height:34px!important;
+    font-size:20px!important;font-weight:700!important;
+    color:#ffffff!important;pointer-events:none!important;
+    font-family:sans-serif!important}
 [data-testid="stNumberInputStepDown"]::after{content:"−"!important}
 [data-testid="stNumberInputStepUp"]::after{content:"+"!important}
 [data-testid="stNumberInputStepDown"]:hover,
 [data-testid="stNumberInputStepUp"]:hover{
-    background:#5533CC!important;border-color:#5533CC!important}
+    background:#5533CC!important;opacity:1!important}
 
 /* ── 포맷 버튼 그룹 간격 축소 ── */
 [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"] > [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlockBorderWrapper"] button){
@@ -614,16 +629,18 @@ def _card(idx, c, logo):
                     # ── 텍스트 X 이동 ─────────────────────────────────────
                     # Y축 이동 없음 — 자동 수직 중앙 정렬 / 메인↔서브 간격 20px 고정
                     if fmt in THREE_FIELD_FMTS:
-                        # 오브젝트 가운데: 좌·우 카피 개별 이동
-                        st.caption("카피 X 이동  ·  4px 단위  ·  좌측 여백 48px 보호")
+                        # 오브젝트 가운데: 좌카피(우방향+) / 우카피(좌방향-)
+                        st.caption("카피 X 이동  ·  4px 단위  ·  좌측 48px·우측 48px 여백 보호")
                         tx1, tx2 = st.columns(2)
-                        _adj_stepper(tx1, cid, adj, "left_dx",  "메인(좌) →",   0, 150, 4)
-                        _adj_stepper(tx2, cid, adj, "right_dx", "메인(우) →",   0, 150, 4)
+                        # 메인(좌): base x=48, +방향(→)으로만 이동 → 최대 obj 33px 전까지
+                        _adj_stepper(tx1, cid, adj, "left_dx",  "메인(좌) →",    0, 100, 4)
+                        # 메인(우): base x=698, -방향(←)으로만 이동 → 우측 여백 48px 보호
+                        _adj_stepper(tx2, cid, adj, "right_dx", "← 메인(우)", -100,   0, 4)
                     else:
                         # 오브젝트 우측: 메인+서브 함께 이동
-                        st.caption("텍스트 X 이동  ·  4px 단위  ·  좌측 여백 48px 보호")
+                        st.caption("텍스트 X 이동  ·  4px 단위  ·  좌측 48px 여백 보호")
                         _tc1, _tc2 = st.columns([1, 1])
-                        _adj_stepper(_tc1, cid, adj, "text_dx", "→ X →", 0, 150, 4)
+                        _adj_stepper(_tc1, cid, adj, "text_dx", "→ X →", 0, 100, 4)
 
                     st.markdown('<hr class="s">', unsafe_allow_html=True)
 
