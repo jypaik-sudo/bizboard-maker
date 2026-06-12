@@ -123,7 +123,7 @@ details summary{font-size:13px!important;font-weight:600!important}
 [data-testid="stNumberInput"] > div,
 [data-testid="stNumberInput"] > div > div{
     display:flex!important;align-items:center!important;
-    flex-wrap:nowrap!important;gap:4px!important;
+    flex-wrap:nowrap!important;gap:2px!important;
     padding-top:5px!important;padding-bottom:5px!important}
 [data-testid="stNumberInput"] input{
     flex:1!important;min-width:0!important}
@@ -139,7 +139,7 @@ details summary{font-size:13px!important;font-weight:600!important}
     padding:0!important;cursor:pointer!important;
     position:relative!important;overflow:visible!important;
     align-self:center!important;flex-shrink:0!important}
-[data-testid="stNumberInputStepDown"]{margin-right:3px!important}
+[data-testid="stNumberInputStepDown"]{margin-right:1px!important}
 /* SVG 숨기기 */
 [data-testid="stNumberInputStepDown"] svg,
 [data-testid="stNumberInputStepUp"] svg{display:none!important}
