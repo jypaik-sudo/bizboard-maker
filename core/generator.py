@@ -3,7 +3,7 @@ from __future__ import annotations
 import io
 import colorsys
 from pathlib import Path
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageChops
 
 CANVAS_W, CANVAS_H = 1029, 258
 ASSETS = Path(__file__).parent.parent / "assets"
@@ -61,6 +61,28 @@ def _paste_logo(canvas: Image.Image, logo_bytes: bytes) -> None:
     canvas.paste(logo, (x, y), logo.split()[3])
 
 
+def _trim_logo(img: Image.Image) -> Image.Image:
+    """로고 이미지 주변 여백(투명 또는 단색 배경) 자동 제거."""
+    img = img.convert("RGBA")
+    r, g, b, a = img.split()
+    # 투명 채널이 있으면 알파 기준으로 크롭
+    if a.getextrema()[0] < 255:
+        bbox = a.getbbox()
+        if bbox:
+            return img.crop(bbox)
+        return img
+    # 불투명 배경: 좌상단 픽셀을 배경색으로 간주하고 trim
+    bg_color = img.getpixel((0, 0))[:3]
+    bg_img = Image.new("RGB", img.size, bg_color)
+    diff = ImageChops.difference(img.convert("RGB"), bg_img)
+    tolerance = 25
+    diff = diff.point(lambda v: 255 if v > tolerance else 0)
+    bbox = diff.getbbox()
+    if bbox:
+        return img.crop(bbox)
+    return img
+
+
 def _paste_brand(canvas: Image.Image, brand_bytes: bytes, x: int, logo_h: int,
                   max_w: int | None = None) -> int:
     """브랜드 로고를 x 위치, 세로 중앙에 배치.
@@ -68,7 +90,7 @@ def _paste_brand(canvas: Image.Image, brand_bytes: bytes, x: int, logo_h: int,
     너비가 max_w를 초과하면 높이는 유지한 채 너비만 max_w로 클램프(가로 크롭).
     반환값: 실제 로고 너비(px).
     """
-    img = Image.open(io.BytesIO(brand_bytes)).convert("RGBA")
+    img = _trim_logo(Image.open(io.BytesIO(brand_bytes)))
     natural_w = max(1, int(logo_h * img.width / img.height))
     actual_h = logo_h
     actual_w = natural_w
