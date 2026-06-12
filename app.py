@@ -108,13 +108,20 @@ details summary{font-size:13px!important;font-weight:600!important}
 [data-testid="stFileUploader"]{min-height:130px!important;margin-top:6px!important;margin-bottom:6px!important}
 [data-testid="stFileUploader"] label{font-size:12px!important;margin-bottom:6px!important;display:block!important}
 
-/* ── stepper 값 표시 ── */
-.step-val{text-align:center;font-size:13px;font-weight:700;
-    color:#3A1D96;padding:5px 2px;background:#F8F6FF;
-    border-radius:6px;border:1px solid #E8E0FF;margin:0}
-.step-zero{color:#AAA!important}
-.stepper-label{font-size:10px;color:#AAA;text-align:center;margin-bottom:3px;
-    letter-spacing:.03em;font-weight:600}
+/* ── number_input 스타일 ── */
+[data-testid="stNumberInput"] label{
+    font-size:10px!important;color:#AAA!important;
+    font-weight:600!important;letter-spacing:.03em!important;
+    margin-bottom:2px!important}
+[data-testid="stNumberInput"] input{
+    text-align:center!important;font-size:13px!important;
+    font-weight:700!important;color:#3A1D96!important;
+    background:#F8F6FF!important;border:1px solid #E8E0FF!important;
+    border-radius:6px!important;padding:4px 2px!important}
+[data-testid="stNumberInputStepDown"],
+[data-testid="stNumberInputStepUp"]{
+    background:#F0EAFF!important;border-color:#D8CCFF!important;
+    color:#3A1D96!important;font-weight:700!important}
 </style>
 """, unsafe_allow_html=True)
 
@@ -320,23 +327,19 @@ def _do_adj_both(cid, key1, key2, delta, lo, hi):
             a[key1] = v; a[key2] = v
             break
 
-# ── ◀ 값 ▶ 스테퍼 UI ─────────────────────────────────────────────────────────
+# ── number_input 스테퍼 ───────────────────────────────────────────────────────
 def _adj_stepper(col, cid, adj, key, label, lo, hi, step, unit="px", default=0):
+    val = max(lo, min(hi, adj.get(key, default)))
+    lbl = f"{label} ({unit})" if unit != "px" else label
     with col:
-        st.markdown(f"<div class='stepper-label'>{label}</div>", unsafe_allow_html=True)
-        val = max(lo, min(hi, adj.get(key, default)))
-        adj[key] = val
-        sc1, sc2, sc3 = st.columns([1, 2, 1])
-        sc1.button("◀", key=f"{key}_d_{cid}", use_container_width=True,
-                   disabled=(val <= lo), on_click=_do_adj, args=(cid, key, -step, lo, hi))
-        color_cls = "step-zero" if val == default else "step-val"
-        sign = "+" if val > 0 else ""
-        disp = f"{val}{unit}" if unit == "%" else f"{sign}{val}{unit}"
-        sc2.markdown(
-            f"<div class='{color_cls}'>{disp}</div>",
-            unsafe_allow_html=True)
-        sc3.button("▶", key=f"{key}_i_{cid}", use_container_width=True,
-                   disabled=(val >= hi), on_click=_do_adj, args=(cid, key, +step, lo, hi))
+        new_val = st.number_input(
+            lbl,
+            min_value=lo, max_value=hi,
+            value=val, step=step,
+            key=f"ni_{key}_{cid}",
+            format="%d",
+        )
+    adj[key] = int(new_val)
 
 
 # ── 간격 경고 계산 ────────────────────────────────────────────────────────────
@@ -549,41 +552,29 @@ def _card(idx, c, logo):
                     # ── 폰트 크기 (39~51 pt) ─────────────────────────────
                     if fmt in THREE_FIELD_FMTS:
                         st.caption("카피 폰트  39~51 pt  ·  메인(좌·우) 항상 동일")
-                        ms = max(39, min(51, adj.get("main_size", MAIN_PT)))
-                        adj["main_size"] = ms; adj["sub_size"] = ms
-                        _sp, fc1, fc2, fc3, _sp2 = st.columns([1,1,2,1,1])
-                        fc1.button("−", key=f"ms_d_{cid}", use_container_width=True,
-                                   disabled=(ms<=39), on_click=_do_adj_both,
-                                   args=(cid,"main_size","sub_size",-1,39,51))
-                        fc2.markdown(f"<div style='text-align:center;font-size:15px;font-weight:800;"
-                                     f"color:#1a1a1a;padding:3px 0'>{ms} pt</div>",
-                                     unsafe_allow_html=True)
-                        fc3.button("+", key=f"ms_i_{cid}", use_container_width=True,
-                                   disabled=(ms>=51), on_click=_do_adj_both,
-                                   args=(cid,"main_size","sub_size",+1,39,51))
+                        _, fc, _ = st.columns([2, 1, 2])
+                        ms_new = fc.number_input(
+                            "pt", min_value=39, max_value=51,
+                            value=max(39, min(51, adj.get("main_size", MAIN_PT))),
+                            step=1, key=f"ni_ms_{cid}", format="%d",
+                        )
+                        adj["main_size"] = int(ms_new)
+                        adj["sub_size"]  = int(ms_new)   # 강제 동기화
                     else:
                         st.caption("폰트 크기  39~51 pt")
                         fa, fb = st.columns(2)
-                        with fa:
-                            st.markdown("<div style='font-size:11px;color:#888;margin-bottom:3px'>메인카피</div>", unsafe_allow_html=True)
-                            ms = max(39, min(51, adj.get("main_size", MAIN_PT)))
-                            adj["main_size"] = ms
-                            fm1, fm2, fm3 = st.columns([1, 2, 1])
-                            fm1.button("−", key=f"ms_d_{cid}", use_container_width=True,
-                                       disabled=(ms<=39), on_click=_do_adj, args=(cid,"main_size",-1,39,51))
-                            fm2.markdown(f"<div style='text-align:center;font-size:15px;font-weight:800;color:#1a1a1a;padding:3px 0'>{ms} pt</div>", unsafe_allow_html=True)
-                            fm3.button("+", key=f"ms_i_{cid}", use_container_width=True,
-                                       disabled=(ms>=51), on_click=_do_adj, args=(cid,"main_size",+1,39,51))
-                        with fb:
-                            st.markdown("<div style='font-size:11px;color:#888;margin-bottom:3px'>서브카피</div>", unsafe_allow_html=True)
-                            ss = max(39, min(51, adj.get("sub_size", SUB_PT)))
-                            adj["sub_size"] = ss
-                            fs1, fs2, fs3 = st.columns([1, 2, 1])
-                            fs1.button("−", key=f"ss_d_{cid}", use_container_width=True,
-                                       disabled=(ss<=39), on_click=_do_adj, args=(cid,"sub_size",-1,39,51))
-                            fs2.markdown(f"<div style='text-align:center;font-size:15px;font-weight:800;color:#1a1a1a;padding:3px 0'>{ss} pt</div>", unsafe_allow_html=True)
-                            fs3.button("+", key=f"ss_i_{cid}", use_container_width=True,
-                                       disabled=(ss>=51), on_click=_do_adj, args=(cid,"sub_size",+1,39,51))
+                        ms_new = fa.number_input(
+                            "메인카피 (pt)", min_value=39, max_value=51,
+                            value=max(39, min(51, adj.get("main_size", MAIN_PT))),
+                            step=1, key=f"ni_ms_{cid}", format="%d",
+                        )
+                        adj["main_size"] = int(ms_new)
+                        ss_new = fb.number_input(
+                            "서브카피 (pt)", min_value=39, max_value=51,
+                            value=max(39, min(51, adj.get("sub_size", SUB_PT))),
+                            step=1, key=f"ni_ss_{cid}", format="%d",
+                        )
+                        adj["sub_size"] = int(ss_new)
 
                     st.markdown('<hr class="s">', unsafe_allow_html=True)
 
@@ -598,8 +589,8 @@ def _card(idx, c, logo):
                     else:
                         # 오브젝트 우측: 메인+서브 함께 이동
                         st.caption("텍스트 X 이동  ·  4px 단위  ·  좌측 여백 48px 보호")
-                        _tx_col, _ = st.columns([1, 1])
-                        _adj_stepper(_tx_col, cid, adj, "text_dx", "→ X →", 0, 150, 4)
+                        _tc1, _tc2 = st.columns([1, 1])
+                        _adj_stepper(_tc1, cid, adj, "text_dx", "→ X →", 0, 150, 4)
 
                     st.markdown('<hr class="s">', unsafe_allow_html=True)
 
