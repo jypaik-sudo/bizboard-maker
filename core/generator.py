@@ -61,14 +61,24 @@ def _paste_logo(canvas: Image.Image, logo_bytes: bytes) -> None:
     canvas.paste(logo, (x, y), logo.split()[3])
 
 
-def _paste_brand(canvas: Image.Image, brand_bytes: bytes, x: int, logo_h: int) -> int:
-    """브랜드 로고를 x 위치, 세로 중앙에 배치. 반환값: 로고 너비(px)."""
+def _paste_brand(canvas: Image.Image, brand_bytes: bytes, x: int, logo_h: int,
+                  max_w: int | None = None) -> int:
+    """브랜드 로고를 x 위치, 세로 중앙에 배치.
+    logo_h: 목표 높이(px). max_w: 최대 허용 너비(오브젝트 여백 보호).
+    너비가 max_w를 초과하면 비율 유지하며 높이도 같이 축소.
+    반환값: 실제 로고 너비(px).
+    """
     img = Image.open(io.BytesIO(brand_bytes)).convert("RGBA")
-    new_w = max(1, int(logo_h * img.width / img.height))
-    img = img.resize((new_w, logo_h), Image.LANCZOS)
-    y = (CANVAS_H - logo_h) // 2
+    natural_w = max(1, int(logo_h * img.width / img.height))
+    actual_h = logo_h
+    actual_w = natural_w
+    if max_w and natural_w > max_w:
+        actual_w = max_w
+        actual_h = max(1, int(logo_h * max_w / natural_w))
+    img = img.resize((actual_w, actual_h), Image.LANCZOS)
+    y = (CANVAS_H - actual_h) // 2
     canvas.paste(img, (x, y), img.split()[3])
-    return new_w
+    return actual_w
 
 
 def _dominant_color(img_bytes: bytes) -> tuple[int, int, int] | None:
@@ -389,10 +399,14 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
                    obj_box[2]+_obj_dx, obj_box[3]+_obj_dy)
 
     # 1. 이미지 오브젝트 배치
+    _MIN_GAP = 33  # 로고 우측 ↔ 오브젝트 좌측 최소 간격
+
     if key in LOGO_RIGHT_FMTS:
         # 브랜드 로고 → 좌측 x=48, 세로 중앙 (메인카피 대체)
         if brand_logo:
-            _paste_brand(canvas, brand_logo, 48, _logo_size)
+            obj_left = obj_box[0] if obj_box else CANVAS_W
+            _logo_max_w = max(1, obj_left - 48 - _MIN_GAP)
+            _paste_brand(canvas, brand_logo, 48, _logo_size, max_w=_logo_max_w)
         # 상품 → 우측 존
         if obj_box and product_images:
             _paste(canvas, product_images[0], obj_box, rotation=_obj_rot)
@@ -400,7 +414,9 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
     elif key in LOGO_FMTS:
         # 브랜드 로고 → 좌측 x=48, 세로 중앙 (메인카피(좌) 대체)
         if brand_logo:
-            _paste_brand(canvas, brand_logo, 48, _logo_size)
+            obj_left = obj_box[0] if obj_box else CANVAS_W
+            _logo_max_w = max(1, obj_left - 48 - _MIN_GAP)
+            _paste_brand(canvas, brand_logo, 48, _logo_size, max_w=_logo_max_w)
         # 상품 → 가운데 존
         if obj_box and product_images:
             _paste(canvas, product_images[0], obj_box, rotation=_obj_rot)
