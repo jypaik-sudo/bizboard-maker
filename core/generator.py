@@ -62,25 +62,46 @@ def _paste_logo(canvas: Image.Image, logo_bytes: bytes) -> None:
 
 
 def _trim_logo(img: Image.Image) -> Image.Image:
-    """로고 이미지 주변 여백(투명 또는 단색 배경) 자동 제거."""
+    """로고 이미지 배경 제거 + 여백 완전 trim.
+
+    1단계: 불투명 배경이면 네 모서리 픽셀 평균으로 배경색 감지 → 투명화
+    2단계: 알파 bbox로 완전 trim
+    """
     img = img.convert("RGBA")
     r, g, b, a = img.split()
-    # 투명 채널이 있으면 알파 기준으로 크롭
+
+    # 이미 투명 채널이 있으면 바로 trim
     if a.getextrema()[0] < 255:
         bbox = a.getbbox()
-        if bbox:
-            return img.crop(bbox)
-        return img
-    # 불투명 배경: 좌상단 픽셀을 배경색으로 간주하고 trim
-    bg_color = img.getpixel((0, 0))[:3]
-    bg_img = Image.new("RGB", img.size, bg_color)
-    diff = ImageChops.difference(img.convert("RGB"), bg_img)
-    tolerance = 25
-    diff = diff.point(lambda v: 255 if v > tolerance else 0)
-    bbox = diff.getbbox()
-    if bbox:
-        return img.crop(bbox)
-    return img
+        return img.crop(bbox) if bbox else img
+
+    # ── 불투명 배경 처리: 배경색 감지 후 투명화 ──
+    w, h = img.size
+    # 네 모서리 + 테두리 샘플 픽셀로 배경색 추정
+    sample_coords = [
+        (0, 0), (w-1, 0), (0, h-1), (w-1, h-1),
+        (w//2, 0), (0, h//2), (w-1, h//2), (w//2, h-1),
+    ]
+    samples = [img.getpixel(c)[:3] for c in sample_coords]
+    bg_r = sum(s[0] for s in samples) // len(samples)
+    bg_g = sum(s[1] for s in samples) // len(samples)
+    bg_b = sum(s[2] for s in samples) // len(samples)
+
+    # 배경색과 유사한 픽셀을 투명으로 교체 (numpy 벡터 연산)
+    tolerance = 30
+    import numpy as np
+    arr = np.array(img)
+    mask = (
+        (np.abs(arr[:, :, 0].astype(int) - bg_r) <= tolerance) &
+        (np.abs(arr[:, :, 1].astype(int) - bg_g) <= tolerance) &
+        (np.abs(arr[:, :, 2].astype(int) - bg_b) <= tolerance)
+    )
+    arr[mask, 3] = 0
+    img = Image.fromarray(arr, "RGBA")
+
+    # 알파 bbox로 완전 trim
+    bbox = img.split()[3].getbbox()
+    return img.crop(bbox) if bbox else img
 
 
 def _paste_brand(canvas: Image.Image, brand_bytes: bytes, x: int, logo_h: int,
