@@ -62,46 +62,50 @@ def _paste_logo(canvas: Image.Image, logo_bytes: bytes) -> None:
 
 
 def _trim_logo(img: Image.Image) -> Image.Image:
-    """로고 이미지 배경 제거 + 여백 완전 trim.
+    """로고 배경 완전 제거 + 여백 trim.
 
-    1단계: 불투명 배경이면 네 모서리 픽셀 평균으로 배경색 감지 → 투명화
-    2단계: 알파 bbox로 완전 trim
+    전략:
+    - 밝은 배경(흰색/연회색): 밝기 기반 알파 마스크 → 부드러운 엣지
+    - 유채색 배경: 모서리 색상 거리 기반 마스크
+    - 이미 부분 투명: 잔류 흰 픽셀까지 추가 제거 후 trim
     """
-    img = img.convert("RGBA")
-    r, g, b, a = img.split()
-
-    # 이미 투명 채널이 있으면 바로 trim
-    if a.getextrema()[0] < 255:
-        bbox = a.getbbox()
-        return img.crop(bbox) if bbox else img
-
-    # ── 불투명 배경 처리: 배경색 감지 후 투명화 ──
-    w, h = img.size
-    # 네 모서리 + 테두리 샘플 픽셀로 배경색 추정
-    sample_coords = [
-        (0, 0), (w-1, 0), (0, h-1), (w-1, h-1),
-        (w//2, 0), (0, h//2), (w-1, h//2), (w//2, h-1),
-    ]
-    samples = [img.getpixel(c)[:3] for c in sample_coords]
-    bg_r = sum(s[0] for s in samples) // len(samples)
-    bg_g = sum(s[1] for s in samples) // len(samples)
-    bg_b = sum(s[2] for s in samples) // len(samples)
-
-    # 배경색과 유사한 픽셀을 투명으로 교체 (numpy 벡터 연산)
-    tolerance = 30
     import numpy as np
-    arr = np.array(img)
-    mask = (
-        (np.abs(arr[:, :, 0].astype(int) - bg_r) <= tolerance) &
-        (np.abs(arr[:, :, 1].astype(int) - bg_g) <= tolerance) &
-        (np.abs(arr[:, :, 2].astype(int) - bg_b) <= tolerance)
-    )
-    arr[mask, 3] = 0
-    img = Image.fromarray(arr, "RGBA")
 
-    # 알파 bbox로 완전 trim
-    bbox = img.split()[3].getbbox()
-    return img.crop(bbox) if bbox else img
+    img = img.convert("RGBA")
+    arr = np.array(img, dtype=np.float32)
+    h, w = arr.shape[:2]
+
+    r_ch, g_ch, b_ch, a_ch = arr[:,:,0], arr[:,:,1], arr[:,:,2], arr[:,:,3]
+
+    # ── 모서리 샘플로 배경색 추정 ──────────────────────────────────────────
+    border_coords = [
+        arr[0, 0], arr[0, w//2], arr[0, w-1],
+        arr[h//2, 0], arr[h//2, w-1],
+        arr[h-1, 0], arr[h-1, w//2], arr[h-1, w-1],
+    ]
+    # 불투명한 모서리만 사용
+    opaque = [c for c in border_coords if c[3] > 200]
+    bg = np.mean([c[:3] for c in opaque], axis=0) if opaque else np.array([255., 255., 255.])
+    bg_lum = 0.299 * bg[0] + 0.587 * bg[1] + 0.114 * bg[2]
+
+    if bg_lum > 180:
+        # ── 밝은 배경: 밝기 기반 알파 (흰색=투명, 어두운 픽셀=불투명) ──────
+        lum = 0.299 * r_ch + 0.587 * g_ch + 0.114 * b_ch
+        # 밝기 → 알파 변환: 어두울수록 불투명
+        # 240 이상은 완전 투명, 180 이하는 완전 불투명, 그 사이는 부드럽게
+        new_alpha = np.clip((240 - lum) / (240 - 140) * 255, 0, 255)
+        # 이미 투명으로 처리된 픽셀(remove.bg 결과)은 유지
+        arr[:,:,3] = np.where(a_ch < 10, 0, new_alpha)
+    else:
+        # ── 유채색 배경: 색상 거리 기반 ───────────────────────────────────
+        tolerance = 40
+        diff = np.abs(arr[:,:,:3] - bg)
+        mask = np.all(diff <= tolerance, axis=2)
+        arr[mask, 3] = 0
+
+    result = Image.fromarray(arr.astype(np.uint8), "RGBA")
+    bbox = result.split()[3].getbbox()
+    return result.crop(bbox) if bbox else result
 
 
 def _paste_brand(canvas: Image.Image, brand_bytes: bytes, x: int, logo_h: int,
