@@ -62,46 +62,40 @@ def _paste_logo(canvas: Image.Image, logo_bytes: bytes) -> None:
 
 
 def _trim_logo(img: Image.Image) -> Image.Image:
-    """로고 배경 완전 제거 + 여백 trim.
+    """로고 배경 제거 + 여백 trim.
 
-    전략:
-    - 밝은 배경(흰색/연회색): 밝기 기반 알파 마스크 → 부드러운 엣지
-    - 유채색 배경: 모서리 색상 거리 기반 마스크
-    - 이미 부분 투명: 잔류 흰 픽셀까지 추가 제거 후 trim
+    - 흰/밝은 배경: 밝기 240 이상 → 완전 투명 (하드 임계값, 글자 보존)
+    - 유채색 배경: 모서리 색상 거리 기반
+    - 이미 부분 투명(remove.bg 처리 후): 잔류 흰 픽셀만 추가 제거
     """
     import numpy as np
 
     img = img.convert("RGBA")
     arr = np.array(img, dtype=np.float32)
     h, w = arr.shape[:2]
+    a_ch = arr[:,:,3]
 
-    r_ch, g_ch, b_ch, a_ch = arr[:,:,0], arr[:,:,1], arr[:,:,2], arr[:,:,3]
+    # remove.bg가 이미 처리한 경우: 투명 픽셀이 있으면 잔류 흰 픽셀만 정리
+    if a_ch.min() < 10:
+        lum = 0.299*arr[:,:,0] + 0.587*arr[:,:,1] + 0.114*arr[:,:,2]
+        arr[(lum > 245) & (a_ch > 200), 3] = 0
+        result = Image.fromarray(arr.astype(np.uint8), "RGBA")
+        bbox = result.split()[3].getbbox()
+        return result.crop(bbox) if bbox else result
 
-    # ── 모서리 샘플로 배경색 추정 ──────────────────────────────────────────
-    border_coords = [
-        arr[0, 0], arr[0, w//2], arr[0, w-1],
-        arr[h//2, 0], arr[h//2, w-1],
-        arr[h-1, 0], arr[h-1, w//2], arr[h-1, w-1],
-    ]
-    # 불투명한 모서리만 사용
-    opaque = [c for c in border_coords if c[3] > 200]
-    bg = np.mean([c[:3] for c in opaque], axis=0) if opaque else np.array([255., 255., 255.])
-    bg_lum = 0.299 * bg[0] + 0.587 * bg[1] + 0.114 * bg[2]
+    # 모서리 4개로 배경색 추정
+    corners = [arr[0,0,:3], arr[0,w-1,:3], arr[h-1,0,:3], arr[h-1,w-1,:3]]
+    bg = np.mean(corners, axis=0)
+    bg_lum = 0.299*bg[0] + 0.587*bg[1] + 0.114*bg[2]
 
-    if bg_lum > 180:
-        # ── 밝은 배경: 밝기 기반 알파 (흰색=투명, 어두운 픽셀=불투명) ──────
-        lum = 0.299 * r_ch + 0.587 * g_ch + 0.114 * b_ch
-        # 밝기 → 알파 변환: 어두울수록 불투명
-        # 240 이상은 완전 투명, 180 이하는 완전 불투명, 그 사이는 부드럽게
-        new_alpha = np.clip((240 - lum) / (240 - 140) * 255, 0, 255)
-        # 이미 투명으로 처리된 픽셀(remove.bg 결과)은 유지
-        arr[:,:,3] = np.where(a_ch < 10, 0, new_alpha)
+    if bg_lum > 220:
+        # 흰/밝은 배경 → 밝기 240 초과 픽셀만 투명 (하드 컷)
+        lum = 0.299*arr[:,:,0] + 0.587*arr[:,:,1] + 0.114*arr[:,:,2]
+        arr[lum > 240, 3] = 0
     else:
-        # ── 유채색 배경: 색상 거리 기반 ───────────────────────────────────
-        tolerance = 40
+        # 유채색 배경 → 색상 거리 기반
         diff = np.abs(arr[:,:,:3] - bg)
-        mask = np.all(diff <= tolerance, axis=2)
-        arr[mask, 3] = 0
+        arr[np.all(diff <= 40, axis=2), 3] = 0
 
     result = Image.fromarray(arr.astype(np.uint8), "RGBA")
     bbox = result.split()[3].getbbox()
