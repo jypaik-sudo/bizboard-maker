@@ -26,14 +26,15 @@ def remove_background(
     image_bytes: bytes,
     api_key: str = "",
     anthropic_key: str = "",  # 호환성 유지 (미사용)
+    subject_type: str = "product",  # "product" | "other" (로고·그래픽)
 ) -> bytes:
-    # ── 1. remove.bg (type=product) ──────────────────────────────────────────
+    # ── 1. remove.bg ─────────────────────────────────────────────────────────
     if api_key:
         try:
             resp = requests.post(
                 "https://api.remove.bg/v1.0/removebg",
                 files={"image_file": ("image.png", io.BytesIO(image_bytes))},
-                data={"size": "auto", "type": "product"},
+                data={"size": "auto", "type": subject_type},
                 headers={"X-Api-Key": api_key},
                 timeout=30,
             )

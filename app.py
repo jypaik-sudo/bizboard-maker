@@ -591,7 +591,7 @@ def _card(idx, c, logo):
                     raw = lf.getvalue(); h = hashlib.md5(raw).hexdigest()
                     if h != c.get("_brand_logo_hash"):
                         with st.spinner("누끼 처리…"):
-                            c["brand_logo"] = remove_background(raw, REMOVEBG_KEY, ANTHROPIC_KEY)
+                            c["brand_logo"] = remove_background(raw, REMOVEBG_KEY, ANTHROPIC_KEY, subject_type="other")
                         c["_brand_logo_hash"] = h
 
             ci1, ci2 = st.columns(2)
@@ -646,7 +646,7 @@ def _card(idx, c, logo):
                 # ── 폰트·로고 크기 ───────────────────────────────────
                 if fmt in LOGO_FMTS and fmt not in THREE_FIELD_FMTS:
                     # 기본+텍스트 / 기본+뱃지: 로고 사이즈 + 서브카피
-                    st.caption("크기 조정  ·  로고 35-120px / 서브카피 39-51pt")
+                    st.caption("크기 조정  ·  로고 기본 65px (35-120) / 서브카피 39-51pt")
                     la, lb = st.columns(2)
                     ls_new = la.number_input(
                         "로고 사이즈 (px)", min_value=35, max_value=120,
