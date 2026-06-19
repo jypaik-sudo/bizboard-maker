@@ -64,40 +64,51 @@ def _paste_logo(canvas: Image.Image, logo_bytes: bytes) -> None:
 def _trim_logo(img: Image.Image) -> Image.Image:
     """로고 배경 제거 + 여백 trim.
 
-    - 흰/밝은 배경: 밝기 240 이상 → 완전 투명 (하드 임계값, 글자 보존)
-    - 유채색 배경: 모서리 색상 거리 기반
-    - 이미 부분 투명(remove.bg 처리 후): 잔류 흰 픽셀만 추가 제거
+    Flood-fill (Photoshop 마술봉) 방식:
+    - 네 모서리에서 연결된 배경 픽셀만 골라 투명화
+    - 배경과 단절된 내부 픽셀(로고 글자 속 흰 부분 등)은 절대 건드리지 않음
+    - 이미 부분 투명(remove.bg 처리 후)이면 잔류 흰 픽셀만 추가 정리
     """
     import numpy as np
+    from PIL import ImageDraw
 
     img = img.convert("RGBA")
-    arr = np.array(img, dtype=np.float32)
+    arr = np.array(img)
     h, w = arr.shape[:2]
-    a_ch = arr[:,:,3]
 
-    # remove.bg가 이미 처리한 경우: 투명 픽셀이 있으면 잔류 흰 픽셀만 정리
-    if a_ch.min() < 10:
-        lum = 0.299*arr[:,:,0] + 0.587*arr[:,:,1] + 0.114*arr[:,:,2]
-        arr[(lum > 245) & (a_ch > 200), 3] = 0
-        result = Image.fromarray(arr.astype(np.uint8), "RGBA")
+    # remove.bg 처리 결과: 이미 투명 픽셀이 있으면 잔류 흰 픽셀만 추가 제거
+    if arr[:,:,3].min() < 10:
+        lum = (0.299*arr[:,:,0].astype(float)
+               + 0.587*arr[:,:,1]
+               + 0.114*arr[:,:,2])
+        arr[(lum > 245) & (arr[:,:,3] > 200), 3] = 0
+        result = Image.fromarray(arr, "RGBA")
         bbox = result.split()[3].getbbox()
         return result.crop(bbox) if bbox else result
 
-    # 모서리 4개로 배경색 추정
-    corners = [arr[0,0,:3], arr[0,w-1,:3], arr[h-1,0,:3], arr[h-1,w-1,:3]]
-    bg = np.mean(corners, axis=0)
-    bg_lum = 0.299*bg[0] + 0.587*bg[1] + 0.114*bg[2]
+    # ── Flood-fill 배경 마스킹 ────────────────────────────────────────────
+    # RGB 사본에 마커 색(0,255,0)으로 flood-fill → 채워진 영역 = 배경
+    rgb = img.convert("RGB")
+    temp = rgb.copy()
+    MARKER = (0, 255, 0)
+    THRESH = 30  # 안티앨리어싱 포함 허용 오차
 
-    if bg_lum > 220:
-        # 흰/밝은 배경 → 밝기 240 초과 픽셀만 투명 (하드 컷)
-        lum = 0.299*arr[:,:,0] + 0.587*arr[:,:,1] + 0.114*arr[:,:,2]
-        arr[lum > 240, 3] = 0
-    else:
-        # 유채색 배경 → 색상 거리 기반
-        diff = np.abs(arr[:,:,:3] - bg)
-        arr[np.all(diff <= 40, axis=2), 3] = 0
+    for corner in [(0, 0), (w-1, 0), (0, h-1), (w-1, h-1)]:
+        try:
+            ImageDraw.floodfill(temp, corner, MARKER, thresh=THRESH)
+        except Exception:
+            pass
 
-    result = Image.fromarray(arr.astype(np.uint8), "RGBA")
+    temp_arr = np.array(temp)
+    # 마커 색과 정확히 일치하는 픽셀 = 배경
+    bg_mask = (
+        (temp_arr[:,:,0] == 0) &
+        (temp_arr[:,:,1] == 255) &
+        (temp_arr[:,:,2] == 0)
+    )
+    arr[bg_mask, 3] = 0
+
+    result = Image.fromarray(arr, "RGBA")
     bbox = result.split()[3].getbbox()
     return result.crop(bbox) if bbox else result
 
