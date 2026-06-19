@@ -1,6 +1,7 @@
 """ABLY 비즈보드 소재 제작기"""
 from __future__ import annotations
 import io, uuid, zipfile, copy, hashlib, json, os, datetime
+from pathlib import Path
 
 import streamlit as st
 from core.generator import generate_png, MAIN_PT, SUB_PT
@@ -203,6 +204,23 @@ details summary{font-size:13px!important;font-weight:600!important}
 </style>
 """, unsafe_allow_html=True)
 
+# ── 브랜드 로고 라이브러리 ────────────────────────────────────────────────────
+LOGO_LIB_DIR = Path("assets/brand_logos")
+LOGO_LIB_DIR.mkdir(parents=True, exist_ok=True)
+
+def _lib_logos() -> dict[str, bytes]:
+    """저장된 브랜드 로고 목록 {이름: PNG bytes}"""
+    return {f.stem: f.read_bytes()
+            for f in sorted(LOGO_LIB_DIR.glob("*.png"))}
+
+def _save_logo(name: str, data: bytes) -> None:
+    safe = "".join(c for c in name if c.isalnum() or c in "-_")[:40] or "logo"
+    (LOGO_LIB_DIR / f"{safe}.png").write_bytes(data)
+
+def _delete_logo(name: str) -> None:
+    p = LOGO_LIB_DIR / f"{name}.png"
+    if p.exists(): p.unlink()
+
 # ── 세션 저장 ─────────────────────────────────────────────────────────────────
 SESS_DIR = "sessions"
 os.makedirs(SESS_DIR, exist_ok=True)
@@ -284,7 +302,7 @@ def _default_adj(fmt: str) -> dict:
     """포맷에 따른 기본 adj — 소재 생성 클릭 시 항상 이 값으로 리셋."""
     base = dict(
         main_size=MAIN_PT, sub_size=SUB_PT,
-        logo_size=65,
+        logo_size=40,
         obj_dx=0, obj_dy=0, obj_scale=100, obj_rotation=0,
         text_dx=0, left_dx=0, right_dx=0,
     )
@@ -584,15 +602,39 @@ def _card(idx, c, logo):
             # 이미지
             st.markdown('<span class="sec">오브젝트 이미지</span>', unsafe_allow_html=True)
             if fmt in LOGO_FMTS:
-                st.caption("브랜드 로고 ✱ (자동 누끼)")
-                lf = st.file_uploader("브랜드 로고", type=["png","jpg","jpeg","webp"],
-                                       key=f"blogo_{cid}", label_visibility="collapsed")
-                if lf:
-                    raw = lf.getvalue(); h = hashlib.md5(raw).hexdigest()
-                    if h != c.get("_brand_logo_hash"):
-                        with st.spinner("누끼 처리…"):
-                            c["brand_logo"] = remove_background(raw, REMOVEBG_KEY, ANTHROPIC_KEY, subject_type="other")
-                        c["_brand_logo_hash"] = h
+                st.markdown('<span class="sec">브랜드 로고</span>', unsafe_allow_html=True)
+                lib = _lib_logos()
+
+                # ── 저장된 로고 선택 ──────────────────────────────────
+                if lib:
+                    sel_cols = st.columns(min(len(lib), 5))
+                    for i, (lname, ldata) in enumerate(lib.items()):
+                        with sel_cols[i % 5]:
+                            st.image(ldata, use_container_width=True)
+                            is_active = (c.get("_brand_logo_name") == lname)
+                            if st.button(
+                                f"✓ {lname}" if is_active else lname,
+                                key=f"libsel_{cid}_{lname}",
+                                type="primary" if is_active else "secondary",
+                                use_container_width=True,
+                            ):
+                                c["brand_logo"] = ldata
+                                c["_brand_logo_name"] = lname
+                                st.rerun()
+
+                # ── 새 로고 추가 ──────────────────────────────────────
+                with st.expander("＋ 새 로고 추가 (누끼 PNG)"):
+                    add_name = st.text_input("로고 이름", placeholder="예: BEIDELLI",
+                                             key=f"logo_name_{cid}")
+                    add_file = st.file_uploader("누끼 PNG 업로드", type=["png"],
+                                                key=f"logo_add_{cid}")
+                    if add_file and add_name:
+                        if st.button("라이브러리에 저장", key=f"logo_save_{cid}",
+                                     type="primary"):
+                            _save_logo(add_name, add_file.getvalue())
+                            c["brand_logo"] = add_file.getvalue()
+                            c["_brand_logo_name"] = add_name
+                            st.rerun()
 
             ci1, ci2 = st.columns(2)
             with ci1:
@@ -646,11 +688,11 @@ def _card(idx, c, logo):
                 # ── 폰트·로고 크기 ───────────────────────────────────
                 if fmt in LOGO_FMTS and fmt not in THREE_FIELD_FMTS:
                     # 기본+텍스트 / 기본+뱃지: 로고 사이즈 + 서브카피
-                    st.caption("크기 조정  ·  로고 기본 65px (35-120) / 서브카피 39-51pt")
+                    st.caption("크기 조정  ·  로고 35-45px / 서브카피 39-51pt")
                     la, lb = st.columns(2)
                     ls_new = la.number_input(
-                        "로고 사이즈 (px)", min_value=35, max_value=120,
-                        value=max(35, min(120, adj.get("logo_size", 65))),
+                        "로고 사이즈 (px)", min_value=35, max_value=45,
+                        value=max(35, min(45, adj.get("logo_size", 40))),
                         step=1, key=f"ni_ls_{cid}", format="%d",
                     )
                     adj["logo_size"] = int(ls_new)
@@ -663,11 +705,11 @@ def _card(idx, c, logo):
 
                 elif fmt in LOGO_FMTS and fmt in THREE_FIELD_FMTS:
                     # 가운데+텍스트 / 가운데+뱃지: 로고 + 메인카피(우) + 서브카피
-                    st.caption("크기 조정  ·  로고 35-120px / 메인카피(우)·서브카피 39-51pt")
+                    st.caption("크기 조정  ·  로고 35-45px / 메인카피(우)·서브카피 39-51pt")
                     la, lb, lc = st.columns(3)
                     ls_new = la.number_input(
-                        "로고 (px)", min_value=35, max_value=120,
-                        value=max(35, min(120, adj.get("logo_size", 65))),
+                        "로고 (px)", min_value=35, max_value=45,
+                        value=max(35, min(45, adj.get("logo_size", 40))),
                         step=1, key=f"ni_ls_{cid}", format="%d",
                     )
                     adj["logo_size"] = int(ls_new)
