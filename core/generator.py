@@ -91,7 +91,7 @@ def _trim_logo(img: Image.Image) -> Image.Image:
     rgb = img.convert("RGB")
     temp = rgb.copy()
     MARKER = (0, 255, 0)
-    THRESH = 30  # 안티앨리어싱 포함 허용 오차
+    THRESH = 50  # 안티앨리어싱·블러·크림색 배경 포함 허용 오차
 
     for corner in [(0, 0), (w-1, 0), (0, h-1), (w-1, h-1)]:
         try:
