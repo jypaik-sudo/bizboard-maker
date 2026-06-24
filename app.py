@@ -53,7 +53,10 @@ div[data-testid="column"] button[kind="primary"]{
     color:white!important;font-weight:700!important}
 
 /* ── 텍스트 입력란 ── */
-[data-testid="stTextInput"] > div{overflow:visible!important}
+[data-testid="stTextInput"] > div{
+    overflow:visible!important;
+    border:none!important;background:transparent!important;padding:0!important;
+}
 [data-testid="stTextInput"] input{
     height:42px!important;font-size:14px!important;
     background:#fff!important;
@@ -71,17 +74,16 @@ div[data-testid="column"] button[kind="primary"]{
 [data-testid="stTextInput"] input::placeholder{color:#C0B8D8!important}
 [data-testid="stTextInput"] label{font-size:11px!important;color:#888!important;margin-bottom:2px!important}
 
-/* 소재명 행 — 버튼 컬럼을 flex-end 정렬로 input 하단에 맞춤 */
-div[data-testid="stHorizontalBlock"]:has([data-testid="stTextInput"]) > div:nth-child(n+2){
-    display:flex!important;
-    align-items:flex-end!important;
+/* 소재명 행 — 버튼 컬럼 내부 stVerticalBlock을 flex-end로 밀어 input 바닥선에 정확히 맞춤 */
+div[data-testid="stHorizontalBlock"]:has([data-testid="stTextInput"]) > div:nth-child(n+2) > div[data-testid="stVerticalBlock"]{
+    display:flex!important;flex-direction:column!important;
+    justify-content:flex-end!important;height:100%!important;
 }
 div[data-testid="stHorizontalBlock"]:has([data-testid="stTextInput"]) > div:nth-child(n+2) button{
-    height:42px!important;min-height:42px!important;
-    margin-top:0!important;
+    height:42px!important;min-height:42px!important;max-height:42px!important;
     border-radius:8px!important;
     font-size:13px!important;font-weight:700!important;
-    padding:0 12px!important;
+    padding:0 12px!important;line-height:42px!important;
 }
 
 /* ── 섹션 라벨 ── */
@@ -134,6 +136,10 @@ details summary{font-size:13px!important;font-weight:600!important}
     height:50px!important;font-size:15px!important;border-radius:10px!important}
 
 /* ── 업로드 박스 ── */
+/* 외부 wrapper의 기본 Streamlit 테두리/배경 제거 → 내부 dropzone만 스타일 */
+[data-testid="stFileUploader"] > div{
+    border:none!important;background:transparent!important;padding:0!important;
+}
 [data-testid="stFileUploaderDropzone"]{
     height:100px!important;min-height:100px!important;max-height:100px!important;
     overflow:hidden!important;box-sizing:border-box!important;
@@ -142,8 +148,8 @@ details summary{font-size:13px!important;font-weight:600!important}
     background:#fff!important;
 }
 [data-testid="stFileUploaderDropzoneInstructions"]{font-size:12px!important}
-[data-testid="stFileUploader"]{min-height:130px!important;margin-top:6px!important;margin-bottom:6px!important}
-[data-testid="stFileUploader"] label{font-size:12px!important;margin-bottom:4px!important;color:#555!important}
+[data-testid="stFileUploader"]{min-height:0!important;margin-top:0!important;margin-bottom:4px!important}
+[data-testid="stFileUploader"] label{font-size:12px!important;margin-bottom:4px!important;color:#555!important;display:block!important}
 
 /* ── number_input 스타일 ── */
 [data-testid="stNumberInput"] label{
