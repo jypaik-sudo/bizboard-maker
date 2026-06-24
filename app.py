@@ -639,9 +639,18 @@ def _card(idx, c, logo):
         # ── 우측 미리보기 + 조정 ────────────────────────────────────────────
         with col_r:
             st.markdown('<span class="panel-right"></span>', unsafe_allow_html=True)
-            # 미리보기 자리 예약
-            preview_slot = st.empty()
-            dl_slot = st.empty()
+
+            # ── 미리보기 (항상 최상단) ───────────────────────────────────
+            if c.get("result_png"):
+                st.image(c["result_png"], use_container_width=True)
+                st.download_button(
+                    "⬇ PNG 저장", data=c["result_png"],
+                    file_name=f"{c['name'] or f'creative_{idx+1}'}.png",
+                    mime="image/png", key=f"dl_{cid}",
+                    use_container_width=True)
+            else:
+                st.markdown('<div class="ph">▶ 소재 생성을 눌러주세요</div>',
+                            unsafe_allow_html=True)
 
             # 조정 패널
             with st.expander("📐 위치·크기 조정", expanded=bool(c.get("result_png"))):
@@ -766,17 +775,6 @@ def _card(idx, c, logo):
                             if r: c["result_png"] = r
                         st.rerun()
 
-            # preview_slot에 최종 이미지 채우기
-            if c.get("result_png"):
-                preview_slot.image(c["result_png"], use_container_width=True)
-                dl_slot.download_button(
-                    "⬇ PNG 저장", data=c["result_png"],
-                    file_name=f"{c['name'] or f'creative_{idx+1}'}.png",
-                    mime="image/png", key=f"dl_{cid}",
-                    use_container_width=True)
-            else:
-                preview_slot.markdown('<div class="ph">▶ 소재 생성을 눌러주세요</div>',
-                                      unsafe_allow_html=True)
 
 
 
