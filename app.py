@@ -53,9 +53,13 @@ div[data-testid="column"] button[kind="primary"]{
     color:white!important;font-weight:700!important}
 
 /* ── 텍스트 입력란 ── */
-[data-testid="stTextInput"] > div{
-    overflow:visible!important;
-    border:none!important;background:transparent!important;padding:0!important;
+/* 모든 wrapper 투명·무테두리 — 실제 input만 스타일 */
+[data-testid="stTextInput"],
+[data-testid="stTextInput"] > div,
+[data-testid="stTextInput"] > div > div{
+    background:transparent!important;border:none!important;
+    padding:0!important;margin:0!important;box-shadow:none!important;
+    height:42px!important;
 }
 [data-testid="stTextInput"] input{
     height:42px!important;font-size:14px!important;
@@ -72,12 +76,11 @@ div[data-testid="column"] button[kind="primary"]{
     outline:none!important;
 }
 [data-testid="stTextInput"] input::placeholder{color:#C0B8D8!important}
-[data-testid="stTextInput"] label{font-size:11px!important;color:#888!important;margin-bottom:2px!important}
 
-/* 소재명 행 버튼 — .hdr-btn-col 마커로 정확히 타겟팅 */
+/* 소재명 행 버튼 — input과 동일 42px 높이, 세로 중앙 정렬 */
 [data-testid="stColumn"]:has(.hdr-btn-col) > div[data-testid="stVerticalBlock"]{
     display:flex!important;flex-direction:column!important;
-    justify-content:flex-end!important;height:100%!important;
+    justify-content:center!important;height:42px!important;
 }
 [data-testid="stColumn"]:has(.hdr-btn-col) button{
     height:42px!important;min-height:42px!important;max-height:42px!important;
@@ -508,7 +511,8 @@ def _card(idx, c, logo):
         c["name"] = hc1.text_input(
             "소재명", value=c["name"],
             placeholder="예: 에잇세컨즈_믹스",
-            key=f"name_{cid}")
+            key=f"name_{cid}",
+            label_visibility="collapsed")
         hc2.markdown('<span class="hdr-btn-col"></span>', unsafe_allow_html=True)
         hc3.markdown('<span class="hdr-btn-col"></span>', unsafe_allow_html=True)
         gen_clicked = hc2.button(
