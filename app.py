@@ -620,15 +620,15 @@ def _card(idx, c, logo):
                             st.rerun()
 
             prods = st.file_uploader(
-                "상품 이미지 ✱  1~3장 · 자동 누끼", type=["png","jpg","jpeg","webp"],
-                accept_multiple_files=True, key=f"prod_{cid}")
+                "상품 이미지", type=["png","jpg","jpeg","webp"],
+                accept_multiple_files=False, key=f"prod_{cid}")
             if prods:
-                raws = [f.getvalue() for f in prods[:3]]
-                hs = [hashlib.md5(b).hexdigest() for b in raws]
-                if hs != c.get("_prod_hashes"):
+                raw = prods.getvalue()
+                h = hashlib.md5(raw).hexdigest()
+                if [h] != c.get("_prod_hashes"):
                     with st.spinner("누끼 처리…"):
-                        c["product_images"] = [remove_background(b, REMOVEBG_KEY, ANTHROPIC_KEY) for b in raws]
-                    c["_prod_hashes"] = hs
+                        c["product_images"] = [remove_background(raw, REMOVEBG_KEY, ANTHROPIC_KEY)]
+                    c["_prod_hashes"] = [h]
 
             st.markdown('<hr class="s">', unsafe_allow_html=True)
 
