@@ -6,14 +6,7 @@ from pathlib import Path
 import streamlit as st
 from core.generator import generate_png, MAIN_PT, SUB_PT
 from core.removebg import remove_background
-from core.emoji import fetch_emoji_candidates, pick_emoji_with_claude, fetch_emoji_png
 from core.color import extract_vibrant_color
-
-
-@st.cache_data(ttl=86400)
-def _fetch_em(url: str) -> bytes | None:
-    from core.emoji import fetch_emoji_png
-    return fetch_emoji_png(url)
 
 st.set_page_config(page_title="ABLY 비즈보드 소재 제작기", page_icon="🗂️", layout="wide")
 
@@ -78,10 +71,14 @@ div[data-testid="column"] button[kind="primary"]{
 [data-testid="stTextInput"] input::placeholder{color:#C0B8D8!important}
 [data-testid="stTextInput"] label{font-size:11px!important;color:#888!important;margin-bottom:2px!important}
 
-/* 소재명 행 버튼들 높이 고정 — text input이 있는 행에만 적용 (포맷 선택 행 제외) */
+/* 소재명 행 — 버튼 컬럼을 flex-end 정렬로 input 하단에 맞춤 */
+div[data-testid="stHorizontalBlock"]:has([data-testid="stTextInput"]) > div:nth-child(n+2){
+    display:flex!important;
+    align-items:flex-end!important;
+}
 div[data-testid="stHorizontalBlock"]:has([data-testid="stTextInput"]) > div:nth-child(n+2) button{
     height:42px!important;min-height:42px!important;
-    margin-top:22px;
+    margin-top:0!important;
     border-radius:8px!important;
     font-size:13px!important;font-weight:700!important;
     padding:0 12px!important;
@@ -224,8 +221,7 @@ def _delete_logo(name: str) -> None:
 # ── 세션 저장 ─────────────────────────────────────────────────────────────────
 SESS_DIR = "sessions"
 os.makedirs(SESS_DIR, exist_ok=True)
-_SKIP = {"product_images","brand_logo","result_png","_prod_hashes",
-         "_brand_logo_hash","reference_image","emoji_candidate_pngs"}
+_SKIP = {"product_images","brand_logo","result_png","_prod_hashes","_brand_logo_hash"}
 
 def _sess_path(sid):
     return os.path.join(SESS_DIR, f"{datetime.date.today().isoformat()}_{sid}.json")
@@ -320,9 +316,7 @@ def _new():
     return dict(id=str(uuid.uuid4())[:8],name="",format="가운데 오브젝트",
                 main_copy="",sub_copy="",sub_right="",emphasis_text="",
                 emphasis_color="#CC0000",use_recommend=True,
-                product_images=[],brand_logo=None,reference_image=None,
-                object_type="단독",use_emoji=False,emoji_keywords="",
-                emoji_candidates=[],emoji_selected=[],emoji_items=[],
+                product_images=[],brand_logo=None,
                 adjustments={},result_png=None)
 
 def _merge(s):
@@ -370,29 +364,9 @@ def _do_gen(c, logo):
             if prod_imgs:
                 # 오브젝트 이미지 기반 색상 추출 → 채도 부스트
                 c["emphasis_color"] = extract_vibrant_color(prod_imgs[0])
-        # emoji_items 변환 (bytes 추가)
-        final_emoji_items = []
-        for item in c.get("emoji_items", []):
-            b = _fetch_em(item["url"])
-            if b:
-                final_emoji_items.append({
-                    "bytes": b,
-                    "size": item.get("size", 52),
-                    "hue": item.get("hue", 0),
-                    "rotation": item.get("rotation", 0),
-                })
-        emoji_images = [it["bytes"] for it in final_emoji_items]  # 기존 호환용
-        # emoji_items 없으면 기존 방식 폴백
-        if not final_emoji_items and c.get("use_emoji"):
-            kw = c.get("emoji_keywords","") or (c["main_copy"]+" "+c["sub_copy"])
-            if not c.get("emoji_candidates"):
-                c["emoji_candidates"] = fetch_emoji_candidates(kw)
-            cands = c["emoji_candidates"]
-            sel = c.get("emoji_selected",[])
-            chosen = ([cd for cd in cands if cd["img_url"] in sel] if sel
-                      else pick_emoji_with_claude(cands,c["main_copy"],c["sub_copy"],ANTHROPIC_KEY))
-            emoji_images = [b for e in chosen if (b := fetch_emoji_png(e.get("img_url","")))]
         prod_imgs = c.get("product_images") or []
+        final_emoji_items = []
+        emoji_images = []
         if not prod_imgs:
             st.warning("⚠️ 상품 이미지가 없습니다. 오브젝트 없이 생성합니다.")
         return generate_png({
@@ -636,44 +610,22 @@ def _card(idx, c, logo):
                             c["_brand_logo_name"] = add_name
                             st.rerun()
 
-            ci1, ci2 = st.columns(2)
-            with ci1:
-                rf = st.file_uploader("레퍼런스 (선택)", type=["png","jpg","jpeg","webp"],
-                                       key=f"ref_{cid}")
-                if rf: c["reference_image"] = rf.getvalue()
-            with ci2:
-                prods = st.file_uploader(
-                    "상품 이미지 ✱  1~3장 · 자동 누끼", type=["png","jpg","jpeg","webp"],
-                    accept_multiple_files=True, key=f"prod_{cid}")
-                if prods:
-                    raws = [f.getvalue() for f in prods[:3]]
-                    hs = [hashlib.md5(b).hexdigest() for b in raws]
-                    if hs != c.get("_prod_hashes"):
-                        with st.spinner("누끼 처리…"):
-                            c["product_images"] = [remove_background(b, REMOVEBG_KEY, ANTHROPIC_KEY) for b in raws]
-                        c["_prod_hashes"] = hs
-
-            c["object_type"] = st.radio(
-                "배치 타입", ["단독","카테고리","믹스(코디)"], horizontal=True,
-                index=["단독","카테고리","믹스(코디)"].index(c.get("object_type","단독")),
-                key=f"otype_{cid}")
+            prods = st.file_uploader(
+                "상품 이미지 ✱  1~3장 · 자동 누끼", type=["png","jpg","jpeg","webp"],
+                accept_multiple_files=True, key=f"prod_{cid}")
+            if prods:
+                raws = [f.getvalue() for f in prods[:3]]
+                hs = [hashlib.md5(b).hexdigest() for b in raws]
+                if hs != c.get("_prod_hashes"):
+                    with st.spinner("누끼 처리…"):
+                        c["product_images"] = [remove_background(b, REMOVEBG_KEY, ANTHROPIC_KEY) for b in raws]
+                    c["_prod_hashes"] = hs
 
             st.markdown('<hr class="s">', unsafe_allow_html=True)
 
-            # 이모티콘 + 복제
-            ec1, ec2 = st.columns([3,1])
-            c["use_emoji"] = ec1.toggle(
-                "이모티콘 추가", value=c.get("use_emoji",False), key=f"emoji_{cid}")
-            ec2.button("📋 복제", key=f"dup_{cid}", use_container_width=True,
-                       on_click=lambda: _dup(cid))
-            if c["use_emoji"]:
-                prev_kw = c.get("emoji_keywords","")
-                c["emoji_keywords"] = st.text_input(
-                    "이모티콘 키워드", value=prev_kw,
-                    placeholder="예: 직장인, 컴퓨터 · 공란이면 카피 기반 자동",
-                    key=f"ekw_{cid}")
-                if c["emoji_keywords"] != prev_kw:
-                    c["emoji_candidates"] = []
+            # 복제 버튼
+            st.button("📋 복제", key=f"dup_{cid}", use_container_width=True,
+                      on_click=lambda: _dup(cid))
 
         # ── 우측 미리보기 + 조정 ────────────────────────────────────────────
         with col_r:
@@ -817,84 +769,6 @@ def _card(idx, c, logo):
                 preview_slot.markdown('<div class="ph">▶ 소재 생성을 눌러주세요</div>',
                                       unsafe_allow_html=True)
 
-            # 이모티콘 픽커
-            if c.get("use_emoji"):
-                if "emoji_items" not in c:
-                    c["emoji_items"] = []
-
-                with st.expander("😀 이모티콘 선택 · 세부 설정"):
-                    kw = c.get("emoji_keywords","") or (c["main_copy"]+" "+c["sub_copy"])
-
-                    # ── 섹션 A: 추천 이모티콘 ──────────────────────────────
-                    st.markdown("**🎯 추천 이모티콘**")
-                    if not c.get("emoji_candidates"):
-                        c["emoji_candidates"] = fetch_emoji_candidates(kw)
-                    cands = c.get("emoji_candidates", [])
-                    sel_urls = {it["url"] for it in c["emoji_items"]}
-
-                    if cands:
-                        per = 6
-                        for ri in range(0, min(len(cands), 12), per):
-                            chunk = cands[ri:ri+per]
-                            pcols = st.columns(len(chunk))
-                            for j, cand in enumerate(chunk):
-                                with pcols[j]:
-                                    png = _fetch_em(cand["img_url"])
-                                    if png: st.image(png, width=44)
-                                    url = cand["img_url"]
-                                    is_sel = url in sel_urls
-                                    if st.button("✓" if is_sel else "＋", key=f"ep_{cid}_{ri+j}",
-                                                 type="primary" if is_sel else "secondary"):
-                                        if is_sel:
-                                            c["emoji_items"] = [it for it in c["emoji_items"] if it["url"]!=url]
-                                        else:
-                                            if len(c["emoji_items"]) < 3:
-                                                c["emoji_items"].append({"url":url,"size":52,"hue":0,"rotation":0})
-                                            else:
-                                                c["emoji_items"] = c["emoji_items"][1:]+[{"url":url,"size":52,"hue":0,"rotation":0}]
-                                        c["emoji_candidates"] = cands
-                                        st.rerun()
-
-                    # ── 섹션 B: 전체 카탈로그 ───────────────────────────────
-                    st.markdown("**📦 전체 이모티콘**")
-                    from core.emoji import get_catalog_candidates, EMOJI_CATALOG
-                    cat_names = list(EMOJI_CATALOG.keys())
-                    sel_cat = st.selectbox("카테고리", cat_names, key=f"ecat_{cid}")
-                    cat_cands = get_catalog_candidates(sel_cat)
-                    sel_urls2 = {it["url"] for it in c["emoji_items"]}
-                    per2 = 8
-                    for ri2 in range(0, len(cat_cands), per2):
-                        chunk2 = cat_cands[ri2:ri2+per2]
-                        pcols2 = st.columns(len(chunk2))
-                        for j2, cand2 in enumerate(chunk2):
-                            with pcols2[j2]:
-                                png2 = _fetch_em(cand2["img_url"])
-                                if png2: st.image(png2, width=40)
-                                url2 = cand2["img_url"]
-                                is_sel2 = url2 in sel_urls2
-                                if st.button("✓" if is_sel2 else "＋", key=f"ec_{cid}_{ri2+j2}",
-                                             type="primary" if is_sel2 else "secondary"):
-                                    if is_sel2:
-                                        c["emoji_items"] = [it for it in c["emoji_items"] if it["url"]!=url2]
-                                    else:
-                                        if len(c["emoji_items"]) < 3:
-                                            c["emoji_items"].append({"url":url2,"size":52,"hue":0,"rotation":0})
-                                        else:
-                                            c["emoji_items"] = c["emoji_items"][1:]+[{"url":url2,"size":52,"hue":0,"rotation":0}]
-                                    st.rerun()
-
-                    # ── 섹션 C: 선택된 이모티콘 개별 설정 ────────────────
-                    if c["emoji_items"]:
-                        st.markdown("**⚙️ 선택된 이모티콘 개별 설정**")
-                        for ei, item in enumerate(c["emoji_items"]):
-                            png_item = _fetch_em(item["url"])
-                            ic1, ic2, ic3, ic4, ic5 = st.columns([1, 2, 2, 2, 1])
-                            if png_item: ic1.image(png_item, width=36)
-                            item["size"]     = ic2.number_input(f"크기{ei+1}", 20, 90, item.get("size",52),   key=f"eis_{cid}_{ei}")
-                            item["rotation"] = ic3.slider(f"기울기{ei+1}°", -45, 45, item.get("rotation",0), key=f"eir_{cid}_{ei}")
-                            item["hue"]      = ic4.slider(f"색조{ei+1}°", -180, 180, item.get("hue",0),      key=f"eih_{cid}_{ei}")
-                            if ic5.button("✕", key=f"eid_{cid}_{ei}"):
-                                c["emoji_items"].pop(ei); st.rerun()
 
 
 def _dup(cid):
