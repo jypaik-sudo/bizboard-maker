@@ -74,17 +74,18 @@ div[data-testid="column"] button[kind="primary"]{
 [data-testid="stTextInput"] input::placeholder{color:#C0B8D8!important}
 [data-testid="stTextInput"] label{font-size:11px!important;color:#888!important;margin-bottom:2px!important}
 
-/* 소재명 행 — 버튼 컬럼 내부 stVerticalBlock을 flex-end로 밀어 input 바닥선에 정확히 맞춤 */
-div[data-testid="stHorizontalBlock"]:has([data-testid="stTextInput"]) > div:nth-child(n+2) > div[data-testid="stVerticalBlock"]{
+/* 소재명 행 버튼 — .hdr-btn-col 마커로 정확히 타겟팅 */
+[data-testid="stColumn"]:has(.hdr-btn-col) > div[data-testid="stVerticalBlock"]{
     display:flex!important;flex-direction:column!important;
     justify-content:flex-end!important;height:100%!important;
 }
-div[data-testid="stHorizontalBlock"]:has([data-testid="stTextInput"]) > div:nth-child(n+2) button{
+[data-testid="stColumn"]:has(.hdr-btn-col) button{
     height:42px!important;min-height:42px!important;max-height:42px!important;
     border-radius:8px!important;
     font-size:13px!important;font-weight:700!important;
-    padding:0 12px!important;line-height:42px!important;
+    padding:0 12px!important;
 }
+.hdr-btn-col{display:none}
 
 /* ── 섹션 라벨 ── */
 .sec{font-size:14px;font-weight:800;color:#3A1D96;letter-spacing:.04em;margin:12px 0 4px;display:block}
@@ -508,6 +509,8 @@ def _card(idx, c, logo):
             "소재명", value=c["name"],
             placeholder="예: 에잇세컨즈_믹스",
             key=f"name_{cid}")
+        hc2.markdown('<span class="hdr-btn-col"></span>', unsafe_allow_html=True)
+        hc3.markdown('<span class="hdr-btn-col"></span>', unsafe_allow_html=True)
         gen_clicked = hc2.button(
             "▶ 소재 생성", key=f"gen_{cid}",
             type="primary", use_container_width=True)
