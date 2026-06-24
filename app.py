@@ -77,12 +77,17 @@ div[data-testid="column"] button[kind="primary"]{
 }
 [data-testid="stTextInput"] input::placeholder{color:#C0B8D8!important}
 
-/* 소재명 행 버튼 — input과 동일 42px 높이, 세로 중앙 정렬 */
-[data-testid="stColumn"]:has(.hdr-btn-col) > div[data-testid="stVerticalBlock"]{
-    display:flex!important;flex-direction:column!important;
-    justify-content:center!important;height:42px!important;
+/* 소재명 행 전체 42px 고정 */
+[data-testid="stHorizontalBlock"]:has(.hdr-btn-col){
+    height:42px!important;overflow:hidden!important;
+    align-items:center!important;
 }
-[data-testid="stColumn"]:has(.hdr-btn-col) button{
+[data-testid="stHorizontalBlock"]:has(.hdr-btn-col) [data-testid="stTextInput"],
+[data-testid="stHorizontalBlock"]:has(.hdr-btn-col) [data-testid="stTextInput"] > div,
+[data-testid="stHorizontalBlock"]:has(.hdr-btn-col) [data-testid="stTextInput"] > div > div{
+    height:42px!important;overflow:hidden!important;
+}
+[data-testid="stHorizontalBlock"]:has(.hdr-btn-col) button{
     height:42px!important;min-height:42px!important;max-height:42px!important;
     border-radius:8px!important;
     font-size:13px!important;font-weight:700!important;
