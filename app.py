@@ -136,9 +136,12 @@ details summary{font-size:13px!important;font-weight:600!important}
     height:50px!important;font-size:15px!important;border-radius:10px!important}
 
 /* ── 업로드 박스 ── */
-/* 외부 wrapper의 기본 Streamlit 테두리/배경 제거 → 내부 dropzone만 스타일 */
-[data-testid="stFileUploader"] > div{
-    border:none!important;background:transparent!important;padding:0!important;
+/* 외부 wrapper 기본 테두리/배경 제거 — 모든 중간 wrapper 투명하게 */
+[data-testid="stFileUploader"] > div,
+[data-testid="stFileUploader"] > div > div,
+[data-testid="stFileUploader"] > div > div > div{
+    border:none!important;background:transparent!important;
+    padding:0!important;border-radius:0!important;box-shadow:none!important;
 }
 [data-testid="stFileUploaderDropzone"]{
     height:100px!important;min-height:100px!important;max-height:100px!important;
