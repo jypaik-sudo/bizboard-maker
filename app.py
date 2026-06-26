@@ -139,9 +139,9 @@ details summary{font-size:13px!important;font-weight:600!important}
 [data-testid="stExpander"][data-expanded="true"] > details > summary{
     border-bottom:1px solid rgba(0,0,0,.06)!important;
 }
-/* expander 내부 상단 패딩 — 소재1 ↔ 소재명 사이 여백 */
+/* expander 내부 상단 패딩 */
 [data-testid="stExpander"] > details > div[data-testid="stExpanderDetails"]{
-    padding-top:16px!important;
+    padding-top:6px!important;
 }
 
 
