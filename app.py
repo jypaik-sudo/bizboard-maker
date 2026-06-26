@@ -329,9 +329,6 @@ def _default_adj(fmt: str) -> dict:
     if fmt == "서브텍스트강조":
         base["main_size"] = 39
         base["sub_size"] = 51
-    # 우측 오브젝트 포맷: ABLY 로고 침범 방지
-    if fmt not in THREE_FIELD_FMTS and fmt not in ("가운데 오브젝트",):
-        base["obj_dx"] = -20
     return base
 
 

@@ -446,14 +446,16 @@ ZONES = {
     "로고 가운데+뱃지":   ((365, 5,  665, 253), None, 0,   698, 283),
 
     # 우측 오브젝트 계열: 텍스트 좌측(x=48), 오브젝트 우측
-    #   obj_left=650, text_x=48, 여유공간 충분
-    "텍스트강조":         ((650, 10, 980, 248), 48,  560, None, 0),
-    "할인율뱃지":         ((650, 10, 980, 248), 48,  560, None, 0),
-    "서브텍스트강조":     ((650, 10, 980, 248), 48,  560, None, 0),
+    #   obj_right=875 = ABLY 로고 좌측(≈878) 직전 — 로고 침범 없음
+    #   text_right=608(48+560), gap=42px ✓
+    "텍스트강조":         ((650, 10, 875, 248), 48,  560, None, 0),
+    "할인율뱃지":         ((650, 10, 875, 248), 48,  560, None, 0),
+    "서브텍스트강조":     ((650, 10, 875, 248), 48,  560, None, 0),
 
-    # 로고 우측: 브랜드 로고(5-430 상단) + 오브젝트(440-730) + 카피 하단좌
-    "로고 우측+텍스트":   ((440, 5,  730, 253), 20,  400, None, 0),
-    "로고 우측+뱃지":     ((440, 5,  730, 253), 20,  400, None, 0),
+    # 로고 우측: 브랜드 로고 좌측 + 오브젝트 우측
+    #   obj_right=875, width=290 → obj_left=585, brand_logo_right≈243, gap≈342px
+    "로고 우측+텍스트":   ((585, 5,  875, 253), 20,  400, None, 0),
+    "로고 우측+뱃지":     ((585, 5,  875, 253), 20,  400, None, 0),
 }
 
 # 브랜드 로고 이미지 배치 존 (LOGO_FMTS 전용)
@@ -514,8 +516,9 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
         hh = int((obj_box[3] - obj_box[1]) * _obj_scale / 2)
         obj_box = (cx - hw, cy - hh, cx + hw, cy + hh)
 
-    # obj_box offset 적용
-    if obj_box and (_obj_dx or _obj_dy):
+    # obj_box offset 적용 (가운데 포맷은 항상 정중앙 고정 — dx/dy 무시)
+    _is_center_fmt = key in CENTER_FMTS or key == "가운데 오브젝트"
+    if obj_box and not _is_center_fmt and (_obj_dx or _obj_dy):
         obj_box = (obj_box[0]+_obj_dx, obj_box[1]+_obj_dy,
                    obj_box[2]+_obj_dx, obj_box[3]+_obj_dy)
 
