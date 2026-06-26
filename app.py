@@ -141,7 +141,7 @@ details summary{font-size:13px!important;font-weight:600!important}
 }
 /* expander 내부 상단 패딩 */
 [data-testid="stExpander"] > details > div[data-testid="stExpanderDetails"]{
-    padding-top:6px!important;
+    padding-top:14px!important;
 }
 
 
