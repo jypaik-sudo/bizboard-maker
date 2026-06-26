@@ -144,10 +144,6 @@ details summary{font-size:13px!important;font-weight:600!important}
     padding-top:16px!important;
 }
 
-/* ── 버튼 행 ↔ 패널 카드 사이 divider 여백 최소화 ── */
-[data-testid="stMarkdownContainer"]:has(hr){margin:0!important;padding:0!important}
-hr[data-testid="stDivider"]{margin:0!important}
-[data-testid="stMarkdownContainer"]:has(hr){margin-bottom:-24px!important}
 
 /* ── 전체 생성 버튼 ── */
 [data-testid="stMainBlockContainer"] > div > div > [data-testid="stButton"]:last-of-type button[kind="primary"]{
@@ -545,8 +541,6 @@ def _card(idx, c, logo):
         if del_clicked:
             st.session_state.creatives = [x for x in st.session_state.creatives if x["id"] != cid]
             st.rerun()
-
-        st.divider()
 
         # ── 본문 2열: 좌(폼) / 우(미리보기+조정) ────────────────────────────
         col_l, col_r = st.columns([10, 11], gap="small")
