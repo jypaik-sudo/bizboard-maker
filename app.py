@@ -659,7 +659,14 @@ def _card(idx, c, logo):
                 "▶ 소재 생성", key=f"gen_{cid}",
                 type="primary", use_container_width=True)
             if gen_clicked:
-                c["adjustments"] = _default_adj(fmt)
+                # 위치·오브젝트만 리셋, 폰트·로고 크기는 사용자 설정 유지
+                _pos_keys = {"obj_dx","obj_dy","obj_scale","obj_rotation","text_dx","left_dx","right_dx"}
+                _prev = c.get("adjustments", {})
+                _new_adj = _default_adj(fmt)
+                for k in list(_new_adj.keys()):
+                    if k not in _pos_keys:
+                        _new_adj[k] = _prev.get(k, _new_adj[k])
+                c["adjustments"] = _new_adj
                 with st.spinner("생성 중…"):
                     r = _do_gen(c, logo)
                     if r: c["result_png"] = r
