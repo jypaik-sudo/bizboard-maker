@@ -139,17 +139,14 @@ details summary{font-size:13px!important;font-weight:600!important}
 [data-testid="stExpander"][data-expanded="true"] > details > summary{
     border-bottom:1px solid rgba(0,0,0,.06)!important;
 }
-/* expander 내부 상단 패딩 축소 */
+/* expander 내부 상단 패딩 최소화 */
 [data-testid="stExpander"] > details > div[data-testid="stExpanderDetails"]{
-    padding-top:8px!important;
+    padding-top:2px!important;
 }
 
-/* ── 헤더 행 ↔ 본문 사이 divider 여백 축소 ── */
-[data-testid="stHorizontalBlock"]:has(.hdr-btn-col) + div hr{
-    margin:6px 0!important;
-}
+/* ── 헤더 행 ↔ 본문 사이 divider 여백 제거 ── */
 [data-testid="stMarkdownContainer"]:has(hr){margin:0!important;padding:0!important}
-hr[data-testid="stDivider"]{margin:6px 0!important}
+hr[data-testid="stDivider"]{margin:2px 0!important}
 
 /* ── 전체 생성 버튼 ── */
 [data-testid="stMainBlockContainer"] > div > div > [data-testid="stButton"]:last-of-type button[kind="primary"]{
