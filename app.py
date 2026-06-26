@@ -57,7 +57,7 @@ div[data-testid="column"] button[kind="primary"]{
 [data-testid="stTextInput"] > div,
 [data-testid="stTextInput"] > div > div{
     background:transparent!important;border:none!important;
-    padding:0!important;box-shadow:none!important;
+    padding:0!important;box-shadow:none!important;overflow:visible!important;
 }
 [data-testid="stTextInput"] input{
     height:42px!important;font-size:14px!important;
