@@ -147,7 +147,7 @@ details summary{font-size:13px!important;font-weight:600!important}
 /* ── 버튼 행 ↔ 패널 카드 사이 divider 여백 최소화 ── */
 [data-testid="stMarkdownContainer"]:has(hr){margin:0!important;padding:0!important}
 hr[data-testid="stDivider"]{margin:0!important}
-[data-testid="stMarkdownContainer"]:has(hr){margin-bottom:-8px!important}
+[data-testid="stMarkdownContainer"]:has(hr){margin-bottom:-12px!important}
 
 /* ── 전체 생성 버튼 ── */
 [data-testid="stMainBlockContainer"] > div > div > [data-testid="stButton"]:last-of-type button[kind="primary"]{
