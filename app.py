@@ -525,18 +525,9 @@ def _card(idx, c, logo):
             )
         hc2.markdown('<span class="hdr-btn-col"></span>', unsafe_allow_html=True)
         hc3.markdown('<span class="hdr-btn-col"></span>', unsafe_allow_html=True)
-        gen_clicked = hc2.button(
-            "▶ 소재 생성", key=f"gen_{cid}",
-            type="primary", use_container_width=True)
+        hc2.button("📋 복제", key=f"dup_{cid}", use_container_width=True,
+                   on_click=lambda: _dup(cid))
         del_clicked = hc3.button("삭제", key=f"del_{cid}", use_container_width=True)
-
-        if gen_clicked:
-            # 소재 생성 시 항상 adj 초기화 → 포맷 기본 위치로 리셋
-            c["adjustments"] = _default_adj(fmt)
-            with st.spinner("생성 중…"):
-                r = _do_gen(c, logo)
-                if r: c["result_png"] = r
-            st.rerun()  # adj 리셋이 스테퍼에 반영되도록
 
         if del_clicked:
             st.session_state.creatives = [x for x in st.session_state.creatives if x["id"] != cid]
@@ -664,9 +655,16 @@ def _card(idx, c, logo):
 
             st.markdown('<hr class="s">', unsafe_allow_html=True)
 
-            # 복제 버튼
-            st.button("📋 복제", key=f"dup_{cid}", use_container_width=True,
-                      on_click=lambda: _dup(cid))
+            # 소재 생성 버튼 (좌측 패널 하단)
+            gen_clicked = st.button(
+                "▶ 소재 생성", key=f"gen_{cid}",
+                type="primary", use_container_width=True)
+            if gen_clicked:
+                c["adjustments"] = _default_adj(fmt)
+                with st.spinner("생성 중…"):
+                    r = _do_gen(c, logo)
+                    if r: c["result_png"] = r
+                st.rerun()
 
         # ── 우측 미리보기 + 조정 ────────────────────────────────────────────
         with col_r:
