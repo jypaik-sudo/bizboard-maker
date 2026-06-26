@@ -126,7 +126,6 @@ hr.s{border:none;border-top:1px solid #EEEEEE!important;margin:10px 0!important}
 
 /* ── expander ── */
 details summary{font-size:13px!important;font-weight:600!important}
-/* expander 내부 흰 배경 제거 → 배경색과 동화 */
 [data-testid="stExpander"]{
     background:transparent!important;
     border:none!important;
@@ -137,10 +136,20 @@ details summary{font-size:13px!important;font-weight:600!important}
     border:1px solid rgba(0,0,0,.08)!important;
     border-radius:10px!important;
 }
-/* 소재 카드 expander 배경 */
 [data-testid="stExpander"][data-expanded="true"] > details > summary{
     border-bottom:1px solid rgba(0,0,0,.06)!important;
 }
+/* expander 내부 상단 패딩 축소 */
+[data-testid="stExpander"] > details > div[data-testid="stExpanderDetails"]{
+    padding-top:8px!important;
+}
+
+/* ── 헤더 행 ↔ 본문 사이 divider 여백 축소 ── */
+[data-testid="stHorizontalBlock"]:has(.hdr-btn-col) + div hr{
+    margin:6px 0!important;
+}
+[data-testid="stMarkdownContainer"]:has(hr){margin:0!important;padding:0!important}
+hr[data-testid="stDivider"]{margin:6px 0!important}
 
 /* ── 전체 생성 버튼 ── */
 [data-testid="stMainBlockContainer"] > div > div > [data-testid="stButton"]:last-of-type button[kind="primary"]{
