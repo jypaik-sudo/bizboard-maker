@@ -527,7 +527,7 @@ def _card(idx, c, logo):
         hc3.markdown('<span class="hdr-btn-col"></span>', unsafe_allow_html=True)
         hc2.button("📋 복제", key=f"dup_{cid}", use_container_width=True,
                    on_click=lambda: _dup(cid))
-        del_clicked = hc3.button("삭제", key=f"del_{cid}", use_container_width=True)
+        del_clicked = hc3.button("🗑 삭제", key=f"del_{cid}", use_container_width=True)
 
         if del_clicked:
             st.session_state.creatives = [x for x in st.session_state.creatives if x["id"] != cid]
