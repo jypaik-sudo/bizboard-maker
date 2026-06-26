@@ -311,8 +311,8 @@ LOGO_FMTS = {
     "[로고] 우측+텍스트","[로고] 우측+뱃지",
 }
 GUIDE = dict(
-    main_size_min=20, main_size_max=80,
-    sub_size_min=16,  sub_size_max=80,
+    main_size_min=39, main_size_max=51,
+    sub_size_min=39,  sub_size_max=51,
     text_dx_limit=200, text_dy_limit=80,
     obj_dx_limit=160,  obj_dy_limit=80,
 )
@@ -703,8 +703,8 @@ def _card(idx, c, logo):
                     )
                     adj["logo_size"] = int(ls_new)
                     ss_new = lb.number_input(
-                        "서브카피 (pt)", min_value=16, max_value=80,
-                        value=max(16, min(80, adj.get("sub_size", SUB_PT))),
+                        "서브카피 (pt)", min_value=39, max_value=51,
+                        value=max(39, min(51, adj.get("sub_size", SUB_PT))),
                         step=1, key=f"ni_ss_{cid}", format="%d",
                     )
                     adj["sub_size"] = int(ss_new)
@@ -720,14 +720,14 @@ def _card(idx, c, logo):
                     )
                     adj["logo_size"] = int(ls_new)
                     ms_new = lb.number_input(
-                        "메인카피(우) (pt)", min_value=16, max_value=80,
-                        value=max(16, min(80, adj.get("main_size", MAIN_PT))),
+                        "메인카피(우) (pt)", min_value=39, max_value=51,
+                        value=max(39, min(51, adj.get("main_size", MAIN_PT))),
                         step=1, key=f"ni_ms_{cid}", format="%d",
                     )
                     adj["main_size"] = int(ms_new)
                     ss_new = lc.number_input(
-                        "서브카피 (pt)", min_value=16, max_value=80,
-                        value=max(16, min(80, adj.get("sub_size", SUB_PT))),
+                        "서브카피 (pt)", min_value=39, max_value=51,
+                        value=max(39, min(51, adj.get("sub_size", SUB_PT))),
                         step=1, key=f"ni_ss_{cid}", format="%d",
                     )
                     adj["sub_size"] = int(ss_new)
@@ -736,8 +736,8 @@ def _card(idx, c, logo):
                     st.caption("카피 폰트 (pt)  ·  메인(좌·우) 항상 동일 / 서브 별도")
                     fa, fb = st.columns(2)
                     ms_new = fa.number_input(
-                        "메인카피 (pt)", min_value=16, max_value=80,
-                        value=max(16, min(80, adj.get("main_size", MAIN_PT))),
+                        "메인카피 (pt)", min_value=39, max_value=51,
+                        value=max(39, min(51, adj.get("main_size", MAIN_PT))),
                         step=1, key=f"ni_ms_{cid}", format="%d",
                     )
                     adj["main_size"] = int(ms_new)
@@ -745,8 +745,8 @@ def _card(idx, c, logo):
                     if _ss_init == adj["main_size"] and "sub_size_set" not in adj:
                         _ss_init = SUB_PT
                     ss_new = fb.number_input(
-                        "서브카피 (pt)", min_value=16, max_value=80,
-                        value=max(16, min(80, _ss_init)),
+                        "서브카피 (pt)", min_value=39, max_value=51,
+                        value=max(39, min(51, _ss_init)),
                         step=1, key=f"ni_ss_{cid}", format="%d",
                     )
                     adj["sub_size"] = int(ss_new)
@@ -755,14 +755,14 @@ def _card(idx, c, logo):
                     st.caption("폰트 크기  39-51 pt")
                     fa, fb = st.columns(2)
                     ms_new = fa.number_input(
-                        "메인카피 (pt)", min_value=16, max_value=80,
-                        value=max(16, min(80, adj.get("main_size", MAIN_PT))),
+                        "메인카피 (pt)", min_value=39, max_value=51,
+                        value=max(39, min(51, adj.get("main_size", MAIN_PT))),
                         step=1, key=f"ni_ms_{cid}", format="%d",
                     )
                     adj["main_size"] = int(ms_new)
                     ss_new = fb.number_input(
-                        "서브카피 (pt)", min_value=16, max_value=80,
-                        value=max(16, min(80, adj.get("sub_size", SUB_PT))),
+                        "서브카피 (pt)", min_value=39, max_value=51,
+                        value=max(39, min(51, adj.get("sub_size", SUB_PT))),
                         step=1, key=f"ni_ss_{cid}", format="%d",
                     )
                     adj["sub_size"] = int(ss_new)
