@@ -53,13 +53,11 @@ div[data-testid="column"] button[kind="primary"]{
     color:white!important;font-weight:700!important}
 
 /* ── 텍스트 입력란 ── */
-/* 모든 wrapper 투명·무테두리 — 실제 input만 스타일 */
-[data-testid="stTextInput"],
+/* wrapper 배경·테두리 제거 — 실제 input만 스타일 */
 [data-testid="stTextInput"] > div,
 [data-testid="stTextInput"] > div > div{
     background:transparent!important;border:none!important;
-    padding:0!important;margin:0!important;box-shadow:none!important;
-    height:42px!important;
+    padding:0!important;box-shadow:none!important;
 }
 [data-testid="stTextInput"] input{
     height:42px!important;font-size:14px!important;
@@ -76,18 +74,22 @@ div[data-testid="column"] button[kind="primary"]{
     outline:none!important;
 }
 [data-testid="stTextInput"] input::placeholder{color:#C0B8D8!important}
+[data-testid="stTextInput"] label{
+    font-size:11px!important;color:#888!important;
+    margin-bottom:2px!important;display:block!important;
+}
 
-/* 소재명 행 전체 42px 고정 */
-[data-testid="stHorizontalBlock"]:has(.hdr-btn-col){
-    height:42px!important;overflow:hidden!important;
-    align-items:center!important;
+/* 소재명 행 버튼 정렬 —
+   hdr-btn-col span wrapper를 height:0으로 눌러서 버튼만 높이에 영향주도록 */
+[data-testid="stVerticalBlockBorderWrapper"]:has(> div > div > .hdr-btn-col){
+    height:0!important;overflow:hidden!important;
+    padding:0!important;margin:0!important;min-height:0!important;
 }
-[data-testid="stHorizontalBlock"]:has(.hdr-btn-col) [data-testid="stTextInput"],
-[data-testid="stHorizontalBlock"]:has(.hdr-btn-col) [data-testid="stTextInput"] > div,
-[data-testid="stHorizontalBlock"]:has(.hdr-btn-col) [data-testid="stTextInput"] > div > div{
-    height:42px!important;overflow:hidden!important;
+[data-testid="stColumn"]:has(.hdr-btn-col) > div[data-testid="stVerticalBlock"]{
+    display:flex!important;flex-direction:column!important;
+    justify-content:flex-end!important;height:100%!important;
 }
-[data-testid="stHorizontalBlock"]:has(.hdr-btn-col) button{
+[data-testid="stColumn"]:has(.hdr-btn-col) button{
     height:42px!important;min-height:42px!important;max-height:42px!important;
     border-radius:8px!important;
     font-size:13px!important;font-weight:700!important;
@@ -517,7 +519,7 @@ def _card(idx, c, logo):
             "소재명", value=c["name"],
             placeholder="예: 에잇세컨즈_믹스",
             key=f"name_{cid}",
-            label_visibility="collapsed")
+            )
         hc2.markdown('<span class="hdr-btn-col"></span>', unsafe_allow_html=True)
         hc3.markdown('<span class="hdr-btn-col"></span>', unsafe_allow_html=True)
         gen_clicked = hc2.button(
