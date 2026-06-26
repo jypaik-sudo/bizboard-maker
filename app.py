@@ -139,14 +139,14 @@ details summary{font-size:13px!important;font-weight:600!important}
 [data-testid="stExpander"][data-expanded="true"] > details > summary{
     border-bottom:1px solid rgba(0,0,0,.06)!important;
 }
-/* expander 내부 상단 패딩 최소화 */
+/* expander 내부 상단 패딩 — 소재1 ↔ 소재명 사이 여백 */
 [data-testid="stExpander"] > details > div[data-testid="stExpanderDetails"]{
-    padding-top:2px!important;
+    padding-top:16px!important;
 }
 
-/* ── 헤더 행 ↔ 본문 사이 divider 여백 제거 ── */
+/* ── 버튼 행 ↔ 패널 카드 사이 divider 여백 최소화 ── */
 [data-testid="stMarkdownContainer"]:has(hr){margin:0!important;padding:0!important}
-hr[data-testid="stDivider"]{margin:2px 0!important}
+hr[data-testid="stDivider"]{margin:0!important}
 
 /* ── 전체 생성 버튼 ── */
 [data-testid="stMainBlockContainer"] > div > div > [data-testid="stButton"]:last-of-type button[kind="primary"]{
