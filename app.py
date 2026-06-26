@@ -517,7 +517,7 @@ def _card(idx, c, logo):
     with st.expander(label, expanded=True):
 
         # ── 헤더 행: 소재명 / 소재생성 / 삭제 ──────────────────────────────
-        hc1, hc2, hc3 = st.columns([5, 2, 1])
+        hc1, hc2, hc3 = st.columns([5, 1, 1])
         c["name"] = hc1.text_input(
             "소재명", value=c["name"],
             placeholder="예: 에잇세컨즈_믹스",
