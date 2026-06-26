@@ -225,21 +225,6 @@ details summary{font-size:13px!important;font-weight:600!important}
 """, unsafe_allow_html=True)
 
 # ── 브랜드 로고 라이브러리 ────────────────────────────────────────────────────
-LOGO_LIB_DIR = Path("assets/brand_logos")
-LOGO_LIB_DIR.mkdir(parents=True, exist_ok=True)
-
-def _lib_logos() -> dict[str, bytes]:
-    """저장된 브랜드 로고 목록 {이름: PNG bytes}"""
-    return {f.stem: f.read_bytes()
-            for f in sorted(LOGO_LIB_DIR.glob("*.png"))}
-
-def _save_logo(name: str, data: bytes) -> None:
-    safe = "".join(c for c in name if c.isalnum() or c in "-_")[:40] or "logo"
-    (LOGO_LIB_DIR / f"{safe}.png").write_bytes(data)
-
-def _delete_logo(name: str) -> None:
-    p = LOGO_LIB_DIR / f"{name}.png"
-    if p.exists(): p.unlink()
 
 # ── 세션 저장 ─────────────────────────────────────────────────────────────────
 SESS_DIR = "sessions"
@@ -605,38 +590,16 @@ def _card(idx, c, logo):
             st.markdown('<span class="sec">오브젝트 이미지</span>', unsafe_allow_html=True)
             if fmt in LOGO_FMTS:
                 st.markdown('<span class="sec">브랜드 로고</span>', unsafe_allow_html=True)
-                lib = _lib_logos()
-
-                # ── 저장된 로고 선택 ──────────────────────────────────
-                if lib:
-                    sel_cols = st.columns(min(len(lib), 5))
-                    for i, (lname, ldata) in enumerate(lib.items()):
-                        with sel_cols[i % 5]:
-                            st.image(ldata, use_container_width=True)
-                            is_active = (c.get("_brand_logo_name") == lname)
-                            if st.button(
-                                f"✓ {lname}" if is_active else lname,
-                                key=f"libsel_{cid}_{lname}",
-                                type="primary" if is_active else "secondary",
-                                use_container_width=True,
-                            ):
-                                c["brand_logo"] = ldata
-                                c["_brand_logo_name"] = lname
-                                st.rerun()
-
-                # ── 새 로고 추가 ──────────────────────────────────────
-                with st.expander("＋ 새 로고 추가 (누끼 PNG)"):
-                    add_name = st.text_input("로고 이름", placeholder="예: BEIDELLI",
-                                             key=f"logo_name_{cid}")
-                    add_file = st.file_uploader("누끼 PNG 업로드", type=["png"],
-                                                key=f"logo_add_{cid}")
-                    if add_file and add_name:
-                        if st.button("라이브러리에 저장", key=f"logo_save_{cid}",
-                                     type="primary"):
-                            _save_logo(add_name, add_file.getvalue())
-                            c["brand_logo"] = add_file.getvalue()
-                            c["_brand_logo_name"] = add_name
-                            st.rerun()
+                logo_file = st.file_uploader(
+                    "누끼 PNG", type=["png"], key=f"logo_up_{cid}")
+                if logo_file:
+                    ldata = logo_file.getvalue()
+                    lhash = hashlib.md5(ldata).hexdigest()
+                    if lhash != c.get("_brand_logo_hash"):
+                        c["brand_logo"] = ldata
+                        c["_brand_logo_hash"] = lhash
+                if c.get("brand_logo"):
+                    st.image(c["brand_logo"], width=120)
 
             prods = st.file_uploader(
                 "상품 이미지", type=["png","jpg","jpeg","webp"],
