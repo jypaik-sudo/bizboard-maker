@@ -637,10 +637,13 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
         effective_pt = _main_size
         if text_x is not None and main_copy:
             effective_pt = _fit_pt(draw, main_copy, _lw, _main_size)
-        # 우측 필요 크기도 체크해서 더 작은 쪽을 기준으로
-        if right_x and sub_copy and _rw > 0:
-            right_pt = _fit_pt(draw, sub_copy, _rw, _main_size)
-            effective_pt = min(effective_pt, right_pt)
+        # 우측 sub_copy·sub_right 모두 zone 폭 기준 fit
+        if right_x and _rw > 0:
+            for _chk in [sub_copy, sub_right]:
+                if _chk:
+                    effective_pt = min(effective_pt, _fit_pt(draw, _chk, _rw, _main_size))
+            # sub_size도 zone 폭에 맞춤
+            _sub_size = min(_sub_size, _fit_pt(draw, sub_right or sub_copy or "", _rw, _sub_size))
 
         if text_x is not None and main_copy:
             _draw_left_zone(draw, text_x + _left_dx, CANVAS_H // 2, main_copy, _lw, pt=effective_pt)

@@ -580,6 +580,23 @@ def _card(idx, c, logo):
                     "서브카피 Regular", value=c["sub_copy"],
                     placeholder="예: 무료배송 + SALE", key=f"sub_{cid}")
 
+            # ── 우측 텍스트 여백 초과 경고 ────────────────────────────────
+            if fmt in THREE_FIELD_FMTS or fmt in LOGO_FMTS:
+                _zone_w = 283  # 우측 zone 폭 (px)
+                _pt = adj.get("main_size", MAIN_PT)
+                # Korean 1자 ≈ pt × 1.05 px (Pretendard 기준 근사값)
+                _max_chars = int(_zone_w / (_pt * 1.05))
+                for _txt, _lbl in [
+                    (c.get("sub_copy",""), "메인카피(우)"),
+                    (c.get("sub_right",""), "서브카피"),
+                ]:
+                    if _txt and len(_txt) > _max_chars:
+                        st.warning(
+                            f"⚠️ **{_lbl}** 텍스트가 우측 여백을 벗어날 수 있어요.  "
+                            f"현재 {len(_txt)}자 · 권장 {_max_chars}자 이하  "
+                            f"(폰트 크기를 줄이거나 텍스트를 단축하세요)",
+                            icon=None)
+
             if fmt in HAS_EMPHASIS:
                 _ref = c.get("sub_right","") if fmt in THREE_FIELD_FMTS else c["sub_copy"]
                 q_label = "강조 텍스트" if em_type == "text" else "뱃지 텍스트"
