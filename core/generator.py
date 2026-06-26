@@ -636,12 +636,15 @@ def generate_png(creative: dict, logo_bytes: bytes) -> bytes:
 
     elif key in LOGO_FMTS:
         # 로고가 좌측 메인카피(좌) 대체 → 우측에만 서브카피
+        # 가운데 로고 포맷(CENTER_FMTS 교집합)은 우측 존 기준 가운데 정렬
         if right_x and (sub_copy or sub_right):
+            _cw = _rw if key in CENTER_FMTS else None
             _draw_text_block(
                 draw, right_x + _right_dx, CANVAS_H // 2,
                 sub_copy, sub_right,
                 emphasis_text, emphasis_color, emphasis_type,
                 main_pt=_main_size, sub_pt=_sub_size,
+                center_w=_cw,
             )
 
     elif key in CENTER_FMTS:
