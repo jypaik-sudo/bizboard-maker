@@ -6,6 +6,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont, ImageChops
 
 CANVAS_W, CANVAS_H = 1029, 258
+MARGIN = 48  # 양 옆 필수 여백 (px)
 ASSETS = Path(__file__).parent.parent / "assets"
 
 FONT_BOLD    = ASSETS / "Pretendard-Bold.otf"
@@ -267,8 +268,15 @@ def _draw_text_block(
     center_w: int | None = None,    # 지정 시 [x, x+center_w] 가운데 정렬
     sub_anchor_x: int | None = None, # 지정 시 서브카피 좌측=sub_anchor_x, 메인은 서브 기준 가운데
 ) -> None:
+    # 48px 좌우 여백 강제 클램프
+    x = max(MARGIN, x)
     _main_pt = main_pt if main_pt is not None else MAIN_PT
     _sub_pt  = sub_pt  if sub_pt  is not None else SUB_PT
+    # center_w가 있을 때 우측 경계 초과 방지
+    if center_w:
+        max_right = CANVAS_W - MARGIN
+        if x + center_w > max_right:
+            center_w = max_right - x
 
     f_main     = _font(True,  _main_pt)
     f_sub      = _font(False, _sub_pt)
@@ -391,6 +399,7 @@ def _draw_left_zone(
     """좌측 텍스트 존 — Bold 1줄 고정, 너비 초과 시 폰트 자동 축소."""
     if not text:
         return
+    x = max(MARGIN, x)  # 48px 좌측 여백 보호
     size = pt if pt is not None else LEFT_MAIN_PT
     size = _fit_pt(draw, text, max_w, size)
     font = _font(True, size)

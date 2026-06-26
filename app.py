@@ -571,11 +571,10 @@ def _card(idx, c, logo):
                     "서브카피 Regular", value=c["sub_copy"],
                     placeholder="예: 무료배송 + SALE", key=f"sub_{cid}")
 
-            # ── 우측 텍스트 여백 초과 경고 ────────────────────────────────
-            if fmt in THREE_FIELD_FMTS or fmt in LOGO_FMTS:
+            # ── 우측 텍스트 여백 초과 경고 (THREE_FIELD_FMTS만 — 우측 존 실제 사용)
+            if fmt in THREE_FIELD_FMTS:
                 _zone_w = 283  # 우측 zone 폭 (px)
                 _pt = adj.get("main_size", MAIN_PT)
-                # Korean 1자 ≈ pt × 1.05 px (Pretendard 기준 근사값)
                 _max_chars = int(_zone_w / (_pt * 1.05))
                 for _txt, _lbl in [
                     (c.get("sub_copy",""), "메인카피(우)"),
